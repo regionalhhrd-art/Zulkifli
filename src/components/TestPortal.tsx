@@ -227,11 +227,20 @@ export default function TestPortal({ userSession, questions, jabatan, onSubmit, 
         <div className="bg-white rounded-none border border-slate-200 p-5 shadow-xs">
           <h4 className="text-xs font-black uppercase tracking-wider mb-3 font-mono text-slate-900">Peserta Pre-Test</h4>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold">
-              <User className="w-5 h-5 text-slate-400" />
-            </div>
-            <div>
-              <div className="text-sm font-black uppercase tracking-tight text-slate-900 font-sans">{userSession.name}</div>
+            {userSession.photo ? (
+              <img
+                src={userSession.photo}
+                alt={userSession.name}
+                className="w-11 h-14 object-cover border border-slate-200 shadow-xs shrink-0"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold shrink-0">
+                <User className="w-5 h-5 text-slate-400" />
+              </div>
+            )}
+            <div className="overflow-hidden">
+              <div className="text-sm font-black uppercase tracking-tight text-slate-900 font-sans truncate">{userSession.name}</div>
               <div className="text-[11px] text-slate-400 font-mono">NIK: {userSession.nik}</div>
             </div>
           </div>

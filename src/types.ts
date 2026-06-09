@@ -18,6 +18,7 @@ export interface Jabatan {
   description: string;
   timeLimitMinutes: number;
   passingScore: number; // e.g. 70
+  sandi: string; // Maximum 2-digit PIN passcode, e.g. "12"
 }
 
 export interface Submission {
@@ -34,6 +35,7 @@ export interface Submission {
   certificateId?: string;
   isPassed: boolean;
   answers: { [questionId: string]: number }; // questionId -> selectedOptionIndex
+  photo?: string; // profile photo as base64 data URI
 }
 
 export interface UserSession {
@@ -41,4 +43,5 @@ export interface UserSession {
   name: string;
   jabatanId: string;
   startedAt?: number;
+  photo?: string; // profile photo as base64 data URI
 }

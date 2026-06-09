@@ -18,7 +18,8 @@ import {
   Clock,
   ChevronRight,
   ShieldAlert,
-  HelpCircle
+  HelpCircle,
+  Lock
 } from "lucide-react";
 
 import Leaderboard from "./components/Leaderboard";
@@ -26,6 +27,7 @@ import Certificate from "./components/Certificate";
 import TestPortal from "./components/TestPortal";
 import AdminPanel from "./components/AdminPanel";
 import RegionalHLogo from "./components/RegionalHLogo";
+import PhotoCapture from "./components/PhotoCapture";
 
 import { DEFAULT_JABATAN_LIST, DEFAULT_QUESTIONS, MOCK_SUBMISSIONS } from "./data";
 import { Jabatan, Question, Submission, UserSession } from "./types";
@@ -55,6 +57,8 @@ export default function App() {
   const [nikInput, setNikInput] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [selectedJabatanId, setSelectedJabatanId] = useState("");
+  const [photoInput, setPhotoInput] = useState("");
+  const [sandiInput, setSandiInput] = useState("");
 
   // Running State for Exam results
   const [activeSubmission, setActiveSubmission] = useState<Submission | null>(null);
@@ -72,20 +76,21 @@ export default function App() {
     localStorage.setItem("pretest_submissions_list", JSON.stringify(submissions));
   }, [submissions]);
 
-  // Migration to single Pre-Test mode and set default selected ID on mount
+  // Handle multi-quiz catalog initialization & sync
   useEffect(() => {
-    if (jabatanList.length !== 1 || jabatanList[0].id !== "pretest_umum") {
+    const hasSandi = jabatanList.length > 0 && "sandi" in jabatanList[0];
+    if (jabatanList.length === 0 || !hasSandi) {
       setJabatanList(DEFAULT_JABATAN_LIST);
       setQuestions(DEFAULT_QUESTIONS);
       setSubmissions(MOCK_SUBMISSIONS);
-      setSelectedJabatanId("pretest_umum");
+      setSelectedJabatanId(DEFAULT_JABATAN_LIST[0].id);
       localStorage.setItem("pretest_jabatan_list", JSON.stringify(DEFAULT_JABATAN_LIST));
       localStorage.setItem("pretest_questions_list", JSON.stringify(DEFAULT_QUESTIONS));
       localStorage.setItem("pretest_submissions_list", JSON.stringify(MOCK_SUBMISSIONS));
-    } else {
-      setSelectedJabatanId("pretest_umum");
+    } else if (!selectedJabatanId && jabatanList.length > 0) {
+      setSelectedJabatanId(jabatanList[0].id);
     }
-  }, [jabatanList]);
+  }, [jabatanList, selectedJabatanId]);
 
   const handleStartExam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,15 +102,31 @@ export default function App() {
       alert("Harap isi Nama Lengkap Anda!");
       return;
     }
+    if (!photoInput) {
+      alert("Harap ambil foto wajah lewat webcam atau unggah foto Anda sebelum memulai pre-test!");
+      return;
+    }
 
-    const targetId = selectedJabatanId || "pretest_umum";
+    const targetId = selectedJabatanId || jabatanList[0]?.id;
+    const targetJob = jabatanList.find(j => j.id === targetId);
+    if (!targetJob) {
+      alert("Harap pilih kuis dari dasbor bank soal terlebih dahulu!");
+      return;
+    }
+
+    // Verify 1-2 digit PIN sandi
+    if (sandiInput.trim() !== targetJob.sandi) {
+      alert(`Sandi Akses Salah! Paket kuis "${targetJob.name}" terproteksi demi ketertiban pengerjaan ujian. Harap hubungi Pengawas / HRD untuk mendapatkan 2 digit sandi kuis ini.`);
+      return;
+    }
 
     // Set Session
     setUserSession({
       nik: nikInput.trim(),
       name: nameInput.trim(),
       jabatanId: targetId,
-      startedAt: Date.now()
+      startedAt: Date.now(),
+      photo: photoInput || undefined
     });
 
     setCurrentView("test");
@@ -142,7 +163,8 @@ export default function App() {
       timestamp: Date.now(),
       certificateId: certNum,
       isPassed: isPassed,
-      answers: answers
+      answers: answers,
+      photo: userSession.photo
     };
 
     // Add submission
@@ -189,6 +211,7 @@ export default function App() {
     setUserSession(null);
     setNikInput("");
     setNameInput("");
+    setPhotoInput("");
     setCurrentView("home");
   };
 
@@ -245,22 +268,6 @@ export default function App() {
             }`}
           >
             <span>Papan Juara</span>
-          </button>
-
-          <div className="hidden lg:block pt-6 pb-2">
-            <p className="text-slate-600 text-[10px] uppercase font-bold tracking-widest px-3 font-mono">Admin Panel</p>
-          </div>
-
-          <button
-            onClick={() => currentView !== "test" && setCurrentView("admin")}
-            disabled={currentView === "test"}
-            className={`w-full text-left flex items-center space-x-3 p-3 rounded-none border-l-4 transition-all uppercase tracking-wider text-xs font-bold cursor-pointer disabled:opacity-50 select-none ${
-              currentView === "admin"
-                ? "bg-slate-800 text-white border-teal-500"
-                : "text-slate-400 hover:bg-slate-800 hover:text-white border-transparent"
-            }`}
-          >
-            <span>Kelola Portal</span>
           </button>
         </nav>
 
@@ -366,30 +373,85 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* General Pre-Test Information Card instead of selection */}
+                  {/* Photo Capture & Upload Widget */}
+                  <div className="pt-2">
+                    <PhotoCapture photo={photoInput} onChange={setPhotoInput} />
+                  </div>                  {/* Dasbor Bank Soal (Quiz Catalog Dashboard) */}
+                  <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-500 tracking-wider uppercase font-mono flex items-center gap-1">
+                      <FileText className="w-3.5 h-3.5 text-teal-600" />
+                      DASBOR BANK SOAL / DAFTAR PILIHAN KUIS ({jabatanList.length})
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {jabatanList.map((jab) => {
+                        const isSelected = selectedJabatanId === jab.id;
+                        const jobQCount = questions.filter((q) => q.jabatanId === jab.id).length;
+                        return (
+                          <div
+                            key={jab.id}
+                            onClick={() => {
+                              setSelectedJabatanId(jab.id);
+                              setSandiInput(""); // Clear PIN entry when changing quiz
+                            }}
+                            className={`p-4 border text-left cursor-pointer transition rounded-none relative overflow-hidden flex flex-col justify-between h-36 ${
+                              isSelected
+                                ? "bg-teal-50/45 border-teal-500 ring-1 ring-teal-500"
+                                : "bg-slate-50/50 border-slate-200 hover:border-slate-350 hover:bg-white"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="text-xs font-black uppercase text-slate-900 tracking-tight leading-snug">
+                                  {jab.name}
+                                </h4>
+                                {isSelected ? (
+                                  <span className="shrink-0 bg-teal-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-none font-mono">
+                                    AKTIF
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 bg-slate-200 text-slate-600 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-none flex items-center gap-0.5">
+                                    PIN
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-450 line-clamp-2 mt-1.5 leading-snug font-sans">
+                                {jab.description}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-[9px] text-slate-500 font-bold uppercase font-mono mt-1">
+                              <span className="text-teal-700 font-extrabold">{jobQCount} Soal</span>
+                              <span>•</span>
+                              <span>{jab.timeLimitMinutes} Menit</span>
+                              <span>•</span>
+                              <span>KKM: {jab.passingScore}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2-Digit Passcode / Sandi Entry Widget */}
                   {selectedJobObj && (
-                    <div className="p-5 bg-slate-50 border border-slate-200 rounded-none text-left flex items-start gap-4">
-                      <div className="p-3 bg-teal-50 border border-teal-150 text-teal-800 rounded-none">
-                        <FileText className="w-6 h-6" />
+                    <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-none space-y-2.5 animate-fade-in text-left">
+                      <div className="flex items-center gap-1.5 text-amber-900 font-extrabold font-mono text-[10px] uppercase tracking-wider">
+                        <Lock className="w-3.5 h-3.5 text-amber-720" />
+                        Sandi Kunci Akses Kuis "{selectedJobObj.name}"
                       </div>
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-black uppercase text-slate-900 tracking-tight font-sans">
-                            {selectedJobObj.name}
-                          </h4>
-                          <span className="bg-teal-100 text-teal-850 text-[10px] font-extrabold px-2.5 py-0.5 rounded-none font-mono">
-                            {selectedJobQuestions.length} Soal
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 leading-relaxed">{selectedJobObj.description}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1.5 text-[10px] text-slate-500 font-bold uppercase font-mono">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-teal-600" />
-                            Batas Waktu: {selectedJobObj.timeLimitMinutes} Menit
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span>KKM Kelulusan: {selectedJobObj.passingScore}%</span>
-                        </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <input
+                          type="text"
+                          maxLength={2}
+                          value={sandiInput}
+                          placeholder="Pin 2 Angka..."
+                          onChange={(e) => setSandiInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                          className="px-3 py-2 bg-white border border-amber-300 text-slate-800 text-center font-black font-mono tracking-widest text-lg w-full sm:w-44 rounded-none outline-none focus:border-amber-500"
+                          required
+                        />
+                        <span className="text-[10px] text-amber-800 leading-snug">
+                          *Materi kuis ini terproteksi sandi. Masukkan 1-2 digit pin kuis ini untuk melakukan konfirmasi verifikasi dimulainya ujian.
+                        </span>
                       </div>
                     </div>
                   )}
@@ -398,13 +460,13 @@ export default function App() {
                     <div className="p-4 bg-rose-50/50 text-rose-800 rounded-none border border-rose-200 text-xs flex gap-2">
                       <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
                       <div>
-                        <strong>Peringatan!</strong> Bank data belum memiliki pertanyaan pre-test aktif. Hubungi Administrator untuk membuat soal baru di Admin Panel.
+                        <strong>Peringatan!</strong> Kuis pilihan Anda tidak memiliki pertanyaan aktif di bank soal. Silakan hubungi Administrator.
                       </div>
                     </div>
                   ) : (
                     <button
                       type="submit"
-                      className="w-full text-center py-4 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-none transition duration-150 cursor-pointer"
+                      className="w-full text-center py-4 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-none transition duration-150 cursor-pointer shadow-xs"
                     >
                       Mulai Pre-Test Sekarang
                     </button>
@@ -649,10 +711,23 @@ export default function App() {
       </main>
 
       {/* Corporate footer info */}
-      <footer className="no-print bg-white border-t border-slate-200 py-6 mt-12 text-slate-400 text-xs text-center font-medium">
+      <footer className="no-print bg-white border-t border-slate-200 py-6 mt-12 text-slate-400 text-xs text-center font-medium relative">
         <p>© 2026 E-Pretest Karyawan. Hak Cipta Dilindungi. Sistem Manajemen Pengendalian Mutu & HRD Regional.</p>
         <p className="mt-1 font-mono text-[10px] text-slate-350">Platform Mandiri v2.0 • Offline Local Sync</p>
       </footer>
+
+      {/* Small floating admin button at the bottom corner */}
+      {currentView !== "test" && (
+        <button
+          id="floating-admin-trigger"
+          onClick={() => setCurrentView(currentView === "admin" ? "home" : "admin")}
+          className="no-print fixed bottom-4 right-4 z-50 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1.5 px-3 py-1.5 shadow-md transition duration-150 text-[10px] font-black uppercase tracking-wider font-mono cursor-pointer select-none rounded-none"
+          title="Kelola Portal (Admin)"
+        >
+          <Settings className="w-3.5 h-3.5 text-teal-400" />
+          <span>Admin</span>
+        </button>
+      )}
     </div>
   );
 }

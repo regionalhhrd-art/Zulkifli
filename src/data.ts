@@ -8,10 +8,35 @@ import { Jabatan, Question, Submission } from "./types";
 export const DEFAULT_JABATAN_LIST: Jabatan[] = [
   {
     id: "pretest_umum",
-    name: "Pre-Test Karyawan",
+    name: "Pre-Test Karyawan (Umum)",
     description: "Ujian evaluasi kompetensi umum, standar disiplin kerja, K3, komunikasi, serta pemecahan masalah.",
     timeLimitMinutes: 15,
     passingScore: 70,
+    sandi: "10"
+  },
+  {
+    id: "pretest_kebun",
+    name: "Asisten & Mandor Kebun",
+    description: "Evaluasi lapangan terkait kepemimpinan regu, teknik agronomi dasar, manajemen konflik, dan akuntabilitas kerja.",
+    timeLimitMinutes: 15,
+    passingScore: 75,
+    sandi: "25"
+  },
+  {
+    id: "pretest_admin_dept",
+    name: "Pelaksana Administrasi & HR",
+    description: "Pemberkasan dinas niaga, penguasaan rumus-rumus spreadsheet Excel, etika telepon, dan tata kelola arsip modern.",
+    timeLimitMinutes: 15,
+    passingScore: 70,
+    sandi: "50"
+  },
+  {
+    id: "pretest_it_support",
+    name: "IT Support & Infrastruktur",
+    description: "Keamanan siber, protokol HTTPS dan DNS, pemecahan masalah kegagalan keras (hardware), serta strategi backup data.",
+    timeLimitMinutes: 15,
+    passingScore: 80,
+    sandi: "99"
   }
 ];
 
@@ -83,10 +108,10 @@ export const DEFAULT_QUESTIONS: Question[] = [
     points: 20,
   },
 
-  // Staff Administrasi Questions mapped to pretest_umum
+  // Staff Administrasi Questions mapped to pretest_admin_dept
   {
     id: "adm_01",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_admin_dept",
     questionText: "Fungsi/rumus manakah di Microsoft Excel yang secara khusus digunakan untuk menjumlahkan seluruh nilai numerik pada sekumpulan sel terpilih?",
     options: [
       "=AVERAGE()",
@@ -99,7 +124,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "adm_02",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_admin_dept",
     questionText: "Apa tujuan utama dari diterapkannya pengelolaan sistem pengarsipan berkas dokumen yang dinamis dan terstruktur?",
     options: [
       "Agar tumpukan dokumen kertas di lemari terlihat estetik dan rapi.",
@@ -112,7 +137,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "adm_03",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_admin_dept",
     questionText: "Formulasi salam pembuka mana yang paling tepat, sopan, dan baku untuk digunakan pada surat resmi/dinas niaga?",
     options: [
       "Halo Teman Semuanya,",
@@ -125,7 +150,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "adm_04",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_admin_dept",
     questionText: "Apa kepanjangan dari terminologi e-Filing yang sering diimplementasikan dalam pengarsipan modern dan administrasi perpajakan?",
     options: [
       "Electronic Filing (Pengisian dokumen online)",
@@ -138,7 +163,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "adm_05",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_admin_dept",
     questionText: "Apabila ada panggilan telepon masuk untuk Direktur yang kebetulan sedang memimpin rapat dinas penting tertutup, apa tindakan admin terbaik?",
     options: [
       "Langsung menyambungkan panggilan telepon ke ruang rapat Direktur.",
@@ -150,10 +175,10 @@ export const DEFAULT_QUESTIONS: Question[] = [
     points: 20,
   },
 
-  // Supervisor Lapangan Questions mapped to pretest_umum
+  // Supervisor Lapangan Questions mapped to pretest_kebun
   {
     id: "spv_01",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_kebun",
     questionText: "Gaya kepemimpinan di mana seorang supervisor aktif mendiskusikan masalah, mendengarkan argumen, dan melibatkan anggota tim dalam mengambil keputusan operasional disebut?",
     options: [
       "Otokratis (Mutlak)",
@@ -166,7 +191,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "spv_02",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_kebun",
     questionText: "Apa kepanjangan dari akronim KPI yang menjadi pilar utama pengukuran performa operasional tim?",
     options: [
       "Key Production Instrument",
@@ -179,7 +204,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "spv_03",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_kebun",
     questionText: "Tindakan pertama apa yang paling bijak dilakukan jika terjadi sengketa pribadi di lapangan antara dua karyawan yang berada langsung di bawah pengawasan Anda?",
     options: [
       "Membiarkan konflik tersebut selesai sendiri karena hal itu persoalan pribadi mereka.",
@@ -192,7 +217,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "spv_04",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_kebun",
     questionText: "Bagaimana kriteria utama untuk mengukur dan mengevaluasi efisiensi operasional tim kerja lapangan?",
     options: [
       "Hanya melihat seberapa ramainya suasana kerja di lokasi tanpa memperdulikan output.",
@@ -205,7 +230,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "spv_05",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_kebun",
     questionText: "Meskipun supervisor telah mendelegasikan wewenang pengerjaan suatu tugas teknis kepada ketua regu bawahan, siapa pihak yang memegang akuntabilitas (tanggung jawab akhir) atas kualitas kerja di mata direksi?",
     options: [
       "Ketua regu bawahan tersebut sepenuhnya.",
@@ -217,10 +242,10 @@ export const DEFAULT_QUESTIONS: Question[] = [
     points: 20,
   },
 
-  // IT Support Questions mapped to pretest_umum
+  // IT Support Questions mapped to pretest_it_support
   {
     id: "it_01",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_it_support",
     questionText: "Protokol transmisi data aman di web browser yang menggunakan enkripsi SSL/TLS ditunjukkan oleh ikon gembok hijau di URL adalah?",
     options: [
       "HTTP",
@@ -233,7 +258,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "it_02",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_it_support",
     questionText: "Apakah kepanjangan dari terminologi IP Address yang merujuk pada alamat identitas unik setiap komputer dalam jaringan?",
     options: [
       "Internet Protocol Address",
@@ -246,7 +271,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "it_03",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_it_support",
     questionText: "Sebuah laptop kantor milik divisi keuangan dilaporkan mati total secara tiba-tiba ketika kabel chargernya dilepas. Apa langkah penanganan hardware pertama yang rasional?",
     options: [
       "Langsung melakukan format harddisk dan reinstall sistem operasi Windows.",
@@ -259,7 +284,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "it_04",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_it_support",
     questionText: "Untuk mengantisipasi bahaya serangan virus Ransomware yang merusak berkas perusahaan, dikenal kebijakan backup 3-2-1. Apa interpretasi praktis dari rumus perlindungan data tersebut?",
     options: [
       "Melakukan backup data setiap 3 minggu sekali, menggunakan 2 USB Flashdisk, dan menyewa 1 server.",
@@ -272,7 +297,7 @@ export const DEFAULT_QUESTIONS: Question[] = [
   },
   {
     id: "it_05",
-    jabatanId: "pretest_umum",
+    jabatanId: "pretest_it_support",
     questionText: "Ditinjau dari fungsionalitas infrastruktur jaringan, apa fungsi mendasar dari DNS (Domain Name System)?",
     options: [
       "Mengamankan data transmisi modem dari peretasan siber.",
@@ -291,10 +316,10 @@ export const MOCK_SUBMISSIONS: Submission[] = [
     nik: "3172010906950001",
     name: "Rian Hermawan",
     jabatanId: "pretest_umum",
-    jabatanName: "Pre-Test Karyawan",
+    jabatanName: "Pre-Test Karyawan (Umum)",
     score: 100,
-    totalQuestions: 20,
-    correctAnswersCount: 20,
+    totalQuestions: 5,
+    correctAnswersCount: 5,
     timeTakenSeconds: 312,
     timestamp: Date.now() - 3 * 3600 * 1000 - 15 * 60 * 1000,
     certificateId: "CERT-GEN-2026-081",
@@ -305,11 +330,11 @@ export const MOCK_SUBMISSIONS: Submission[] = [
     id: "sub_02",
     nik: "3201041210920005",
     name: "Siti Rahmawati",
-    jabatanId: "pretest_umum",
-    jabatanName: "Pre-Test Karyawan",
+    jabatanId: "pretest_admin_dept",
+    jabatanName: "Pelaksana Administrasi & HR",
     score: 80,
-    totalQuestions: 20,
-    correctAnswersCount: 16,
+    totalQuestions: 5,
+    correctAnswersCount: 4,
     timeTakenSeconds: 420,
     timestamp: Date.now() - 25 * 3600 * 1000,
     certificateId: "CERT-GEN-2026-014",

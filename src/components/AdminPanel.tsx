@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Award,
@@ -20,7 +20,10 @@ import {
   Clock,
   Briefcase,
   Edit,
-  Download
+  Download,
+  Key,
+  ShieldCheck,
+  AlertCircle
 } from "lucide-react";
 import { Question, Jabatan, Submission } from "../types";
 import RegionalHLogo from "./RegionalHLogo";
@@ -65,12 +68,28 @@ export default function AdminPanel({
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
   // State for adding new question
-  const [selectedJabatanForQuestion, setSelectedJabatanForQuestion] = useState<string>(jabatanList[0]?.id || "");
+  const [selectedJabatanForQuestion, setSelectedJabatanForQuestion] = useState<string>("");
   const [newQuestionText, setNewQuestionText] = useState("");
   const [newQuestionOptions, setNewQuestionOptions] = useState<string[]>(["", "", "", ""]);
   const [newQuestionCorrectIdx, setNewQuestionCorrectIdx] = useState<number>(0);
   const [newQuestionPoints, setNewQuestionPoints] = useState<number>(20);
-  const [manageSelectedJabatan, setManageSelectedJabatan] = useState<string>(jabatanList[0]?.id || "all");
+  const [manageSelectedJabatan, setManageSelectedJabatan] = useState<string>("all");
+
+  // State elements for adding new Quiz (Judul Kuis)
+  const [newQuizName, setNewQuizName] = useState("");
+  const [newQuizDesc, setNewQuizDesc] = useState("");
+  const [newQuizTime, setNewQuizTime] = useState<number>(15);
+  const [newQuizKKM, setNewQuizKKM] = useState<number>(70);
+  const [newQuizSandi, setNewQuizSandi] = useState(""); // 2 digits maximum passcode
+
+  // Synchronize default selected jabatan when list loads
+  useEffect(() => {
+    if (jabatanList.length > 0) {
+      if (!selectedJabatanForQuestion) {
+        setSelectedJabatanForQuestion(jabatanList[0].id);
+      }
+    }
+  }, [jabatanList, selectedJabatanForQuestion]);
 
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +97,7 @@ export default function AdminPanel({
       setIsAdminAuthenticated(true);
       setAuthError("");
     } else {
-      setAuthError("Sandi Salah! (Gunakan sandi kustom yang telah Anda set, atau sandi default: admin)");
+      setAuthError("Sandi Salah! (Sandi default: admin)");
     }
   };
 
@@ -102,7 +121,7 @@ export default function AdminPanel({
     localStorage.setItem("pretest_admin_password", passwordToSave);
     setNewSandi("");
     setConfirmSandi("");
-    alert("Sukses! Kata sandi admin berhasil diperbarui secara kustom!");
+    alert("Sukses! Kata sandi panel admin berhasil diperbarui!");
   };
 
   // Stats calculation
@@ -124,10 +143,12 @@ export default function AdminPanel({
       return;
     }
 
+    const currentJabatanId = selectedJabatanForQuestion || jabatanList[0]?.id || "pretest_umum";
+
     if (editingQuestion) {
       const updatedQuestion: Question = {
         id: editingQuestion.id,
-        jabatanId: selectedJabatanForQuestion,
+        jabatanId: currentJabatanId,
         questionText: newQuestionText,
         options: [...newQuestionOptions],
         correctOptionIndex: newQuestionCorrectIdx,
@@ -136,11 +157,11 @@ export default function AdminPanel({
 
       onUpdateQuestion(updatedQuestion);
       setEditingQuestion(null);
-      alert("Pertanyaan pre-test berhasil diperbarui!");
+      alert("Pertanyaan berhasil diperbarui!");
     } else {
       const createdQuestion: Question = {
         id: "q_" + Date.now().toString(),
-        jabatanId: selectedJabatanForQuestion,
+        jabatanId: currentJabatanId,
         questionText: newQuestionText,
         options: [...newQuestionOptions],
         correctOptionIndex: newQuestionCorrectIdx,
@@ -148,7 +169,7 @@ export default function AdminPanel({
       };
 
       onAddQuestion(createdQuestion);
-      alert("Pertanyaan pre-test berhasil dibuat dan ditambahkan!");
+      alert("Pertanyaan pre-test baru berhasil ditambahkan!");
     }
 
     // Reset form
@@ -164,17 +185,89 @@ export default function AdminPanel({
     setNewQuestionOptions(updated);
   };
 
-  const updateThresholdSetting = (jabId: string, field: "passingScore" | "timeLimitMinutes", val: number) => {
+  // Quiz update handler
+  const updateQuizField = (quizId: string, field: keyof Jabatan, val: any) => {
+    let finalVal = val;
+    if (field === "sandi") {
+      // Clean non-digits and slice to 2 characters max
+      finalVal = String(val).replace(/\D/g, "").slice(0, 2);
+    }
+    
+    // Save to global list
     const updated = jabatanList.map((j) => {
-      if (j.id === jabId) {
+      if (j.id === quizId) {
         return {
           ...j,
-          [field]: val,
+          [field]: finalVal,
         };
       }
       return j;
     });
     onUpdateJabatanSettings(updated);
+  };
+
+  // Save new Quiz Title (Judul Kuis)
+  const handleAddNewQuizSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuizName.trim() || !newQuizDesc.trim()) {
+      alert("Mohon isi Nama Kuis dan Deskripsi Kuis secara lengkap!");
+      return;
+    }
+
+    const cleanSandi = newQuizSandi.replace(/\D/g, "").slice(0, 2);
+    if (!cleanSandi) {
+      alert("Sandi akses wajib berupa angka (maksimal 2 digit, contoh: 88 atau 07)!");
+      return;
+    }
+
+    const newQuizId = "quiz_" + Date.now().toString().slice(-6);
+    const newQuizObj: Jabatan = {
+      id: newQuizId,
+      name: newQuizName.trim(),
+      description: newQuizDesc.trim(),
+      timeLimitMinutes: Number(newQuizTime) || 15,
+      passingScore: Number(newQuizKKM) || 70,
+      sandi: cleanSandi
+    };
+
+    onUpdateJabatanSettings([...jabatanList, newQuizObj]);
+    
+    // Reset Form
+    setNewQuizName("");
+    setNewQuizDesc("");
+    setNewQuizTime(15);
+    setNewQuizKKM(70);
+    setNewQuizSandi("");
+    
+    // Select this newly created Quiz Category automatically in question selector
+    setSelectedJabatanForQuestion(newQuizId);
+    
+    alert(`Sukses menambahkan kuis baru: "${newQuizObj.name}" dengan Sandi Akses: "${cleanSandi}"!`);
+  };
+
+  // Delete a Quiz Title category
+  const handleDeleteQuiz = (id: string, name: string) => {
+    if (jabatanList.length <= 1) {
+      alert("Gagal menghapus! Paling sedikit harus tersisa 1 judul kuis aktif.");
+      return;
+    }
+    
+    const countRelated = questions.filter(q => q.jabatanId === id).length;
+    const msg = `Apakah Anda yakin ingin menghapus judul kuis "${name}"?\nSandi akses dan seluruh pengaturannya akan ditiadakan.\nJumlah soal terkait: ${countRelated} soal.`;
+    
+    if (confirm(msg)) {
+      const updatedList = jabatanList.filter(j => j.id !== id);
+      onUpdateJabatanSettings(updatedList);
+      
+      // Auto adjust selection
+      if (selectedJabatanForQuestion === id) {
+        setSelectedJabatanForQuestion(updatedList[0].id);
+      }
+      if (manageSelectedJabatan === id) {
+        setManageSelectedJabatan("all");
+      }
+      alert(`Kuis "${name}" berhasil dihapus.`);
+    }
   };
 
   const handleExportExcel = () => {
@@ -196,7 +289,6 @@ export default function AdminPanel({
       "Tanggal Ujian"
     ];
 
-    // Force Excel to understand semicolon separator in different regional environments using sep=;
     let csvContent = "sep=;\r\n";
     csvContent += headers.join(";") + "\r\n";
 
@@ -211,7 +303,7 @@ export default function AdminPanel({
       });
       const duration = `${Math.floor(sub.timeTakenSeconds / 60)} menit ${sub.timeTakenSeconds % 60} detik`;
       const row = [
-        `"${sub.nik}"`, // quote NIK to avoid converting long numbers into scientific format or dropping leading zeroes
+        `"${sub.nik}"`,
         `"${sub.name}"`,
         `"${sub.jabatanName}"`,
         sub.score,
@@ -249,8 +341,8 @@ export default function AdminPanel({
             <span className="text-[10px] font-black tracking-widest text-[#009646] font-sans">REGIONAL H</span>
           </div>
           <h2 className="text-xl font-black uppercase text-slate-900 tracking-tight font-sans">Autentikasi Admin</h2>
-          <p className="text-xs text-slate-500">
-            Panel ini terproteksi untuk keperluan Manajemen HRD/Evaluator. Masukkan kata sandi default untuk melanjutkan.
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Materi & sandi bank soal diproteksi demi integritas ujian karyawan. Masukkan kata sandi hak akses administrator untuk melanjutkan kelola portal.
           </p>
         </div>
 
@@ -267,9 +359,9 @@ export default function AdminPanel({
             />
             <p className="text-[10px] text-slate-400 mt-1">
               {adminPassword === "admin" ? (
-                <span>Hint kata sandi default: <strong className="text-teal-700">admin</strong></span>
+                <span>Sandi bawaan pabrik: <strong className="text-teal-700">admin</strong></span>
               ) : (
-                <span className="text-emerald-700 font-semibold font-mono uppercase tracking-tight">Sandi Kustom Aktif</span>
+                <span className="text-emerald-700 font-semibold font-mono uppercase tracking-tight">Sandi Kustom Anda Aktif</span>
               )}
             </p>
           </div>
@@ -299,18 +391,18 @@ export default function AdminPanel({
         <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-teal-900/30"></div>
 
         <div className="relative space-y-1.5 z-10 text-center md:text-left">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-850 border border-teal-800 tracking-wide text-teal-300">
-            MODE ADMIN AKTIF
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-850 border border-teal-800 tracking-wide text-teal-300 font-mono">
+            MODE MANAJEMEN SOAL & KUIS
           </span>
-          <h2 className="text-2xl md:text-3xl font-black uppercase text-white tracking-tight">Dashboard Kelola Pre-Test REGIONAL H</h2>
+          <h2 className="text-2xl md:text-3xl font-black uppercase text-white tracking-tight leading-none">Menejemen Bank Soal & Sandi Kuis</h2>
           <p className="text-xs text-teal-200">
-            Kelola list materi pertanyaan, atur standardisasi nilai kelulusan, dan review partisipasi calon karyawan.
+            Kustomisasi katalog judul ujian, kelola kunci jawaban bank soal, dan tentukan sandi rahasia maksimal 2 angka.
           </p>
         </div>
 
         <button
           onClick={() => setIsAdminAuthenticated(false)}
-          className="no-print relative z-10 inline-flex items-center gap-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-750 font-black text-xs text-slate-200 px-4 py-2.5 rounded-none transition cursor-pointer uppercase font-mono tracking-wider"
+          className="no-print relative z-10 inline-flex items-center gap-1.5 bg-slate-1000 hover:bg-slate-850 text-teal-400 border border-teal-905 hover:text-white font-black text-[10px] px-4 py-2.5 rounded-none transition cursor-pointer uppercase font-mono tracking-wider"
         >
           Logout Admin
         </button>
@@ -339,16 +431,6 @@ export default function AdminPanel({
           Bank Soal ({questions.length})
         </button>
         <button
-          onClick={() => setActiveTab("submissions")}
-          className={`px-4 py-3 text-xs font-bold border-b-2 transition cursor-pointer font-mono uppercase tracking-wider ${
-            activeTab === "submissions"
-              ? "border-teal-500 text-teal-600 font-black"
-              : "border-transparent text-slate-550 hover:text-slate-800 font-bold"
-          }`}
-        >
-          Daftar Hasil Pre-Test ({submissions.length})
-        </button>
-        <button
           onClick={() => setActiveTab("settings")}
           className={`px-4 py-3 text-xs font-bold border-b-2 transition cursor-pointer font-mono uppercase tracking-wider ${
             activeTab === "settings"
@@ -356,7 +438,17 @@ export default function AdminPanel({
               : "border-transparent text-slate-550 hover:text-slate-800 font-bold"
           }`}
         >
-          Konfigurasi Aturan
+          Kelola Kuis & Sandi ({jabatanList.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("submissions")}
+          className={`px-4 py-3 text-xs font-bold border-b-2 transition cursor-pointer font-mono uppercase tracking-wider ${
+            activeTab === "submissions"
+              ? "border-teal-500 text-teal-600 font-black"
+              : "border-transparent text-slate-550 hover:text-slate-800 font-bold"
+          }`}
+        >
+          Hasil Pre-Test ({submissions.length})
         </button>
       </div>
 
@@ -364,7 +456,7 @@ export default function AdminPanel({
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Bento Stats row */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
             <div className="bg-white rounded-none border border-slate-204 p-5 shadow-xs flex items-center gap-4">
               <div className="p-2.5 bg-teal-50 border border-teal-100 rounded-none text-teal-705">
                 <Users className="w-6 h-6" />
@@ -390,7 +482,7 @@ export default function AdminPanel({
                 <Percent className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rata-rata Kelulusan</div>
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Presentase Lulus</div>
                 <div className="text-2xl font-bold text-slate-800 mt-0.5">{passRate}%</div>
               </div>
             </div>
@@ -400,7 +492,7 @@ export default function AdminPanel({
                 <Award className="w-6 h-6" />
               </div>
               <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rerata Skor Ujian</div>
+                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">Rerata Nilai</div>
                 <div className="text-2xl font-bold text-slate-800 mt-0.5">{averageScore}</div>
               </div>
             </div>
@@ -408,13 +500,27 @@ export default function AdminPanel({
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 bg-white rounded-none border border-slate-204 p-5 shadow-xs space-y-4">
-              <h3 className="text-sm font-bold text-slate-800">Partisipasi Terbaru Peserta</h3>
+              <h3 className="text-sm font-black uppercase tracking-tight text-slate-800 font-sans">Aktivitas Ujian Terbaru Karyawan</h3>
               <div className="divide-y divide-slate-100">
                 {submissions.slice(0, 5).map((sub) => (
                   <div key={sub.id} className="py-3 flex items-center justify-between text-xs gap-4 hover:bg-slate-50/40 px-2 rounded-none border-b border-dashed border-slate-100 transition">
-                    <div>
-                      <div className="font-bold text-slate-800">{sub.name}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">NIK: {sub.nik} • {sub.jabatanName}</div>
+                    <div className="flex items-center gap-3">
+                      {sub.photo ? (
+                        <img
+                          src={sub.photo}
+                          alt={sub.name}
+                          className="w-8 h-8 rounded-none object-cover border border-slate-205 bg-slate-100 shrink-0"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-none border border-dashed border-slate-250 flex items-center justify-center text-slate-350 text-[8px] font-mono shrink-0 bg-slate-100">
+                          N/A
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-slate-800 uppercase font-sans">{sub.name}</div>
+                        <div className="text-[10px] text-slate-400 mt-0.5">NIK: {sub.nik} • {sub.jabatanName}</div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
@@ -430,23 +536,30 @@ export default function AdminPanel({
                   </div>
                 ))}
                 {totalSubmissionsCount === 0 && (
-                  <div className="text-center py-12 text-slate-400 text-xs">Belum ada peserta pre-test yang masuk menduduki rekapitulasi.</div>
+                  <div className="text-center py-12 text-slate-400 text-xs">Belum ada riwayat pengerjaan pre-test masuk ke server.</div>
                 )}
               </div>
             </div>
 
             <div className="lg:col-span-4 bg-white rounded-none border border-slate-204 p-5 shadow-xs space-y-4">
-              <h3 className="text-sm font-bold text-slate-800">Spesifikasi Pre-Test</h3>
+              <h3 className="text-sm font-black uppercase text-slate-800 tracking-tight font-sans">Katalog Kuis & Sandi Akses</h3>
               <div className="space-y-3">
                 {jabatanList.map((jab) => {
                   const qCount = questions.filter((q) => q.jabatanId === jab.id).length;
                   return (
-                    <div key={jab.id} className="p-3 bg-slate-50 rounded-none border border-slate-150 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="font-bold text-slate-805">{jab.name}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">Batas: {jab.timeLimitMinutes} Menit • KKM: {jab.passingScore}%</div>
+                    <div key={jab.id} className="p-3 bg-slate-50 rounded-none border border-slate-150 flex items-center justify-between text-xs hover:bg-slate-100/50 transition">
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-805 flex items-center gap-1">
+                          <Briefcase className="w-3.5 h-3.5 text-teal-600" />
+                          <span>{jab.name}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 flex flex-wrap gap-x-2">
+                          <span>KKM: {jab.passingScore}%</span>
+                          <span>•</span>
+                          <span className="font-mono text-emerald-700 font-bold bg-emerald-50 px-1">PIN: {jab.sandi}</span>
+                        </div>
                       </div>
-                      <div className="font-mono font-black text-teal-800 bg-teal-100 px-2 py-1 rounded-none border border-teal-200">
+                      <div className="font-mono font-black text-teal-850 bg-teal-100 px-2 py-1 border border-teal-200 shrink-0 text-[10px]">
                         {qCount} Soal
                       </div>
                     </div>
@@ -459,13 +572,13 @@ export default function AdminPanel({
       )}
 
       {activeTab === "questions" && (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start animate-fade-in">
           {/* Add Question panel card */}
-          <div className="xl:col-span-5 bg-white rounded-none border border-slate-200 p-5 shadow-xs space-y-4" id="soal-editor-card">
-            <h3 className="text-sm font-bold text-slate-800 flex items-center justify-between pb-2 border-b border-slate-100" id="soal-editor-title">
-              <span className="flex items-center gap-1.5">
-                {editingQuestion ? <Edit className="w-4 h-4 text-teal-655 animate-pulse" /> : <Plus className="w-4 h-4 text-teal-700" />}
-                {editingQuestion ? "Edit Soal / Pertanyaan" : "Buat Pertanyaan Baru"}
+          <div className="xl:col-span-5 bg-white rounded-none border border-slate-200 p-5 shadow-xs space-y-4 font-sans" id="soal-editor-card">
+            <h3 className="text-sm font-bold text-slate-850 flex items-center justify-between pb-2 border-b border-slate-100" id="soal-editor-title">
+              <span className="flex items-center gap-1.5 uppercase tracking-wide">
+                {editingQuestion ? <Edit className="w-4 h-4 text-teal-655" /> : <Plus className="w-4 h-4 text-teal-700" />}
+                {editingQuestion ? "Edit Pertanyaan Bank Soal" : "Buat Soal Pre-Test Baru"}
               </span>
               {editingQuestion && (
                 <button
@@ -477,38 +590,54 @@ export default function AdminPanel({
                     setNewQuestionCorrectIdx(0);
                     setNewQuestionPoints(20);
                   }}
-                  className="text-[10px] uppercase font-bold text-slate-400 hover:text-slate-800 tracking-wider font-mono underline"
+                  className="text-[10px] uppercase font-black text-rose-700 hover:text-rose-900 tracking-wider font-mono cursor-pointer"
                 >
-                  Batal
+                  Batal Sunting
                 </button>
               )}
             </h3>
 
             <form onSubmit={handleCreateQuestionSubmit} className="space-y-4 text-xs">
+              {/* Category Dropdown Selection */}
               <div>
-                <label className="block font-bold text-slate-500 mb-1">PERTANYAAN (SOAL)</label>
+                <label className="block font-bold text-slate-500 mb-1 font-mono uppercase text-[10px]">Pilih Kategori Judul Kuis</label>
+                <select
+                  value={selectedJabatanForQuestion}
+                  onChange={(e) => setSelectedJabatanForQuestion(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-205 rounded-none font-bold text-xs cursor-pointer focus:border-teal-555 focus:bg-white focus:outline-none"
+                >
+                  {jabatanList.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.name} (Sandi: {j.sandi})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-500 mb-1 font-mono uppercase text-[10px]">Deskripsi Kalimat Pertanyaan</label>
                 <textarea
-                  placeholder="Ketik deskripsi lengkap kalimat pertanyaan..."
+                  placeholder="Ketik kalimat soal ujian..."
                   value={newQuestionText}
                   onChange={(e) => setNewQuestionText(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none"
+                  rows={4}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none text-xs"
                   required
                 ></textarea>
               </div>
 
               {/* Options lists inputs */}
               <div className="space-y-3">
-                <label className="block font-bold text-slate-500">OPSI PILIHAN JAWABAN</label>
+                <label className="block font-bold text-slate-500 font-mono text-[10px] uppercase">Opsi Alternatif Jawaban & Kunci Benar (Radio)</label>
                 {newQuestionOptions.map((opt, oIdx) => (
                   <div key={oIdx} className="flex items-center gap-2">
-                    <span className="font-extrabold text-slate-400 w-4">{String.fromCharCode(65 + oIdx)}.</span>
+                    <span className="font-extrabold text-slate-400 w-4 font-mono">{String.fromCharCode(65 + oIdx)}.</span>
                     <input
                       type="text"
-                      placeholder={`Isi pilihan ke-${oIdx + 1}...`}
+                      placeholder={`Opsi pilihan ${String.fromCharCode(65 + oIdx)}...`}
                       value={opt}
                       onChange={(e) => handleOptionChange(oIdx, e.target.value)}
-                      className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none"
+                      className="flex-1 px-3 py-2 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none text-xs"
                       required
                     />
                     <input
@@ -516,8 +645,8 @@ export default function AdminPanel({
                       name="correct-option-radio"
                       checked={newQuestionCorrectIdx === oIdx}
                       onChange={() => setNewQuestionCorrectIdx(oIdx)}
-                      title="Set sebagai jawaban benar"
-                      className="w-4 h-4 accent-teal-750 cursor-pointer"
+                      title="Tandai opsi ini sebagai kunci jawaban yang benar"
+                      className="w-4 h-4 accent-teal-600 cursor-pointer"
                     />
                   </div>
                 ))}
@@ -525,23 +654,23 @@ export default function AdminPanel({
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="block font-bold text-slate-500 mb-1">BOBOT POIN SOAL</label>
+                  <label className="block font-bold text-slate-505 mb-1 font-mono uppercase text-[10px]">Bobot Poin Soal</label>
                   <input
                     type="number"
                     min="5"
                     max="100"
                     value={newQuestionPoints}
                     onChange={(e) => setNewQuestionPoints(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-205 rounded-none focus:border-teal-550 focus:bg-white focus:outline-none text-xs font-mono font-bold"
                     required
                   />
                 </div>
                 <div className="flex items-end">
                   <button
                     type="submit"
-                    className="w-full text-center py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-black rounded-none transition cursor-pointer uppercase tracking-wider font-mono"
+                    className="w-full text-center py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-black rounded-none transition cursor-pointer uppercase tracking-wider font-mono shadow-xs"
                   >
-                    {editingQuestion ? "Simpan Perubahan" : "Simpan Pertanyaan"}
+                    {editingQuestion ? "Simpan Perubahan" : "Tambahkan Soal"}
                   </button>
                 </div>
               </div>
@@ -550,35 +679,52 @@ export default function AdminPanel({
 
           {/* List of active questions panel */}
           <div className="xl:col-span-7 bg-white rounded-none border border-slate-200 p-5 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-2 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 uppercase font-sans">
                 <BookOpen className="w-4 h-4 text-teal-700" />
-                Daftar Soal Tersimpan
+                Daftar Pertanyaan Tersimpan
               </h3>
+              
+              {/* Filter Select Tab */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold">Filter Kuis:</span>
+                <select
+                  value={manageSelectedJabatan}
+                  onChange={(e) => setManageSelectedJabatan(e.target.value)}
+                  className="px-2 py-1 border border-slate-250 bg-slate-50 rounded-none text-xs text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="all">Semua Judul Kuis</option>
+                  {jabatanList.map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.name} ({questions.filter(q => q.jabatanId === j.id).length})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* List scroll */}
-            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1.5 custom-scrollbar">
+            <div className="space-y-4 max-h-[550px] overflow-y-auto pr-1 text-xs">
               {filteredQuestions.length > 0 ? (
                 filteredQuestions.map((q, qIndex) => {
                   const targetJob = jabatanList.find((j) => j.id === q.jabatanId);
 
                   return (
-                    <div key={q.id} className="p-4 bg-slate-50 rounded-none border border-slate-200 space-y-2 text-xs hover:border-slate-300 transition">
+                    <div key={q.id} className="p-4 bg-slate-50/75 rounded-none border border-slate-200 space-y-2 text-xs hover:border-slate-350 hover:bg-white transition">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-2 py-0.5 rounded-none bg-teal-100 text-teal-850 font-black font-mono uppercase tracking-wider text-[9px]">
-                              Pre-Test Karyawan
+                        <div className="space-y-1 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="px-2.5 py-0.5 rounded-none bg-teal-50 text-teal-850 font-black font-mono uppercase tracking-wider text-[9px] border border-teal-200">
+                              {targetJob?.name || "Kategori Terhapus"}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-mono">Poin: {q.points}</span>
+                            <span className="text-[10px] text-slate-400 font-mono font-bold bg-slate-100 px-1">Poin: {q.points}</span>
                           </div>
-                          <h4 className="font-bold text-slate-800 text-xs leading-relaxed">
+                          <h4 className="font-bold text-slate-800 text-xs leading-relaxed pt-1 font-sans">
                             {qIndex + 1}. {q.questionText}
                           </h4>
                         </div>
 
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => {
                               setEditingQuestion(q);
@@ -589,14 +735,14 @@ export default function AdminPanel({
                               setNewQuestionPoints(q.points);
                               document.getElementById("soal-editor-title")?.scrollIntoView({ behavior: "smooth" });
                             }}
-                            title="Edit soal"
-                            className="p-1.5 text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-transparent hover:border-teal-200 rounded-none transition cursor-pointer"
+                            title="Edit pertanyaan ini"
+                            className="p-1 px-2 bg-white border border-slate-200 hover:border-teal-400 hover:text-teal-700 text-slate-650 transition cursor-pointer font-mono uppercase text-[9px] font-bold"
                           >
-                            <Edit className="w-4 h-4" />
+                            Edit
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm("Hapus soal pre-test ini?")) {
+                              if (confirm("Hapus soal ini dari database kelola pre-test?")) {
                                 if (editingQuestion?.id === q.id) {
                                   setEditingQuestion(null);
                                   setNewQuestionText("");
@@ -607,26 +753,26 @@ export default function AdminPanel({
                                 onDeleteQuestion(q.id);
                               }
                             }}
-                            aria-label="Delete question"
-                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                            aria-label="Remove question"
+                            className="p-1 px-2 bg-white border border-rose-200 hover:border-rose-450 hover:text-rose-700 text-slate-600 transition cursor-pointer font-mono uppercase text-[9px] font-bold"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            Hapus
                           </button>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 pl-4 pt-1">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-2 pt-1 font-sans">
                         {q.options.map((opt, oIdx) => (
                           <div
                             key={oIdx}
-                            className={`p-1.5 rounded-none border text-[11px] leading-tight flex items-start gap-1 ${
+                            className={`p-1.5.5 px-2.5 rounded-none border text-[11px] leading-snug flex items-start gap-1.5 ${
                               oIdx === q.correctOptionIndex
-                                ? "bg-emerald-50 text-emerald-800 border-emerald-250 font-bold"
-                                : "bg-white text-slate-500 border-slate-200"
+                                ? "bg-emerald-50 text-emerald-805 border-emerald-250 font-bold"
+                                : "bg-white text-slate-550 border-slate-200"
                             }`}
                           >
-                            <span className="font-bold">{String.fromCharCode(65 + oIdx)}.</span>
-                            <span>{opt}</span>
+                            <span className="font-black font-mono text-[10px] text-slate-400">{String.fromCharCode(65 + oIdx)}.</span>
+                            <span className="flex-1">{opt}</span>
                           </div>
                         ))}
                       </div>
@@ -634,8 +780,9 @@ export default function AdminPanel({
                   );
                 })
               ) : (
-                <div className="text-center py-16 text-slate-400 text-xs">
-                  Tidak ada soal tertambat pada kualifikasi ini. Silakan tambahkan pertanyaan baru.
+                <div className="text-center py-16 text-slate-400 bg-slate-50 border border-slate-150 rounded-none">
+                  <p className="font-bold uppercase tracking-wide text-[10px] font-mono mb-1">Bank Soal Kosong</p>
+                  <p className="text-[11px]">Belum ada soal terdaftar pada kategori kuis pilihan ini.</p>
                 </div>
               )}
             </div>
@@ -643,8 +790,249 @@ export default function AdminPanel({
         </div>
       )}
 
+      {activeTab === "settings" && (
+        <div className="space-y-6 animate-fade-in text-xs font-sans">
+          {/* Main Layout containing both Add Quiz and List Quiz */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Left: Add Quiz Title section */}
+            <div className="lg:col-span-5 bg-white border border-slate-200 p-5 shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 pb-2 border-b border-slate-100 uppercase tracking-wide">
+                <Plus className="w-4 h-4 text-emerald-650" />
+                Tambah Kuis / Paket Baru
+              </h3>
+              
+              <form onSubmit={handleAddNewQuizSubmit} className="space-y-4">
+                <div>
+                  <label className="block font-bold text-slate-500 mb-1 font-mono uppercase text-[10px]">Nama / Judul Paket Kuis</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Teknis Operator Traksi..."
+                    value={newQuizName}
+                    onChange={(e) => setNewQuizName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-205 focus:border-teal-550 focus:bg-white focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-500 mb-1 font-mono uppercase text-[10px]">Deskripsi Singkat Kuis</label>
+                  <textarea
+                    placeholder="Contoh: Evaluasi khusus penguasaan pemecahan kerusakan mekanis traktor di lapangan..."
+                    value={newQuizDesc}
+                    onChange={(e) => setNewQuizDesc(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-205 focus:border-teal-555 focus:bg-white focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-bold text-slate-505 mb-1 font-mono uppercase text-[10px]">KKM Minimal (%)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={newQuizKKM}
+                      onChange={(e) => setNewQuizKKM(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-205 text-center font-bold font-mono focus:bg-white focus:outline-none"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-slate-505 mb-1 font-mono uppercase text-[10px]">Durasi Ujian (Menit)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={newQuizTime}
+                      onChange={(e) => setNewQuizTime(Number(e.target.value))}
+                      className="w-full px-3 py-1.5 bg-slate-50 border border-slate-205 text-center font-bold font-mono focus:bg-white focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password / Access Sandi constraint max 2 digits check */}
+                <div>
+                  <label className="block font-black text-rose-800 mb-1 font-mono uppercase text-[10px] tracking-wide flex items-center gap-1">
+                    <Key className="w-3.5 h-3.5 text-rose-700" />
+                    Sandi Akses Portal (Maks 2 Angka Pin)
+                  </label>
+                  <input
+                    type="text"
+                    maxLength={2}
+                    placeholder="Contoh: 18"
+                    value={newQuizSandi}
+                    onChange={(e) => setNewQuizSandi(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                    className="w-full px-3 py-2 bg-rose-50/50 border border-rose-200 placeholder-rose-300 focus:border-rose-500 focus:bg-white focus:outline-none font-bold text-lg font-mono text-center tracking-widest text-slate-800"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 leading-snug">
+                     Peserta wajib memasukkan kunci/PIN 1-2 digit angka yang sama persis ini sebelum dapat memulai pre-test.
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full text-center py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black hover:text-white uppercase tracking-wider font-mono cursor-pointer transition shadow-xs"
+                >
+                  Tambah & Publikasikan Paket Ujian
+                </button>
+              </form>
+            </div>
+
+            {/* Right: List and Edit existing quizzes */}
+            <div className="lg:col-span-7 bg-white border border-slate-200 p-5 space-y-4 shadow-xs">
+              <h3 className="text-sm font-bold text-slate-850 pb-2 border-b border-slate-100 uppercase tracking-wide flex items-center gap-1.5">
+                <Settings className="w-4 h-4 text-teal-700" />
+                Daftar & Konfigurasi Sandi Judul Kuis
+              </h3>
+
+              <div className="space-y-4 max-h-[580px] overflow-y-auto pr-1">
+                {jabatanList.map((jab) => {
+                  const qCount = questions.filter(q => q.jabatanId === jab.id).length;
+                  return (
+                    <div key={jab.id} className="p-4 rounded-none border border-slate-200 space-y-3 bg-slate-50 relative group">
+                      
+                      {/* Delete button absolutely positioned inside item */}
+                      <div className="absolute top-3 right-3 select-none">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteQuiz(jab.id, jab.name)}
+                          className="px-2 py-1 hover:bg-rose-100 text-[10px] font-black uppercase text-rose-700 font-mono tracking-wider transition border border-rose-200 cursor-pointer"
+                          title="Hapus kuis ini dari bank soal"
+                        >
+                          Hapus Kuis
+                        </button>
+                      </div>
+
+                      <div className="space-y-1 pr-20">
+                        <div className="flex items-center gap-2">
+                          <span className="p-1 px-1.5 font-mono text-[9px] bg-teal-100 border border-teal-200 text-teal-850 font-extrabold uppercase">
+                            ID: {jab.id}
+                          </span>
+                          <span className="font-mono text-[9px] bg-slate-200 text-slate-705 font-bold uppercase px-1.5 px-0.5">
+                            {qCount} Soal Tertaut
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          value={jab.name}
+                          onChange={(e) => updateQuizField(jab.id, "name", e.target.value)}
+                          className="w-full font-bold text-slate-855 text-sm bg-transparent hover:bg-white border-b border-transparent focus:border-teal-500 py-0.5 focus:bg-white focus:outline-none focus:px-1.5 transition font-sans"
+                        />
+                        <textarea
+                          value={jab.description}
+                          onChange={(e) => updateQuizField(jab.id, "description", e.target.value)}
+                          rows={2}
+                          className="w-full text-xs text-slate-500 bg-transparent hover:bg-white border-b border-transparent focus:border-teal-500 py-0.5 focus:bg-white focus:outline-none focus:px-1.5 transition leading-snug mt-1"
+                        />
+                      </div>
+
+                      {/* Edit threshold options and Sandi PIN code */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-dashed border-slate-200">
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase font-mono">Batas Waktu (Menit)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            value={jab.timeLimitMinutes}
+                            onChange={(e) => updateQuizField(jab.id, "timeLimitMinutes", Number(e.target.value))}
+                            className="w-full mt-1 px-2 py-1 bg-white border border-slate-250 text-xs text-center font-bold font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-400 uppercase font-mono">KKM Minimal (%)</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={jab.passingScore}
+                            onChange={(e) => updateQuizField(jab.id, "passingScore", Number(e.target.value))}
+                            className="w-full mt-1 px-2 py-1 bg-white border border-slate-250 text-xs text-center font-bold font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[9px] font-black text-rose-750 uppercase font-mono flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-rose-700" />
+                            Sandi (PIN 1-2 Digit)
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={2}
+                            placeholder="Contoh: 15"
+                            value={jab.sandi}
+                            onChange={(e) => updateQuizField(jab.id, "sandi", e.target.value)}
+                            className="w-full mt-1 px-2 py-1 bg-rose-50 border border-rose-200 text-xs text-center font-bold font-mono text-rose-800 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+          </div>
+
+          {/* Custom Admin Password Section */}
+          <div className="bg-white rounded-none border border-slate-200 p-6 shadow-xs space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#009646]" />
+                Kustomisasi Kata Sandi Admin (REGIONAL H)
+              </h3>
+              <p className="text-xs text-slate-500">Ubah kata sandi default ("admin") dengan kata sandi kustom pilihan Anda sendiri demi meningkatkan keamanan akses panel admin.</p>
+            </div>
+
+            <form onSubmit={handleChangePassword} className="max-w-md space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase leading-none font-mono">KATA SANDI BARU</label>
+                  <input
+                    type="password"
+                    placeholder="Masukkan sandi baru..."
+                    value={newSandi}
+                    onChange={(e) => setNewSandi(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-none text-xs focus:outline-none focus:border-teal-500 focus:bg-white transition font-mono"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase leading-none font-mono">KONFIRMASI KATA SANDI</label>
+                  <input
+                    type="password"
+                    placeholder="Ulangi sandi baru..."
+                    value={confirmSandi}
+                    onChange={(e) => setConfirmSandi(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-250 rounded-none text-xs focus:outline-none focus:border-teal-500 focus:bg-white transition font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 text-xs">
+                <div className="text-[10px] text-slate-400">
+                  Kata sandi aktif saat ini: <strong className="text-slate-700 font-mono">{adminPassword}</strong>
+                </div>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-black rounded-none transition uppercase tracking-wider font-sans cursor-pointer whitespace-nowrap"
+                >
+                  Simpan Sandi Kustom
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {activeTab === "submissions" && (
-        <div className="bg-white rounded-none border border-slate-200 p-4 md:p-6 shadow-xs space-y-4">
+        <div className="bg-white rounded-none border border-slate-200 p-4 md:p-6 shadow-xs space-y-4 animate-fade-in text-xs">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-bold text-slate-800">Daftar Log Riwayat Peserta Pre-Test</h3>
@@ -692,14 +1080,30 @@ export default function AdminPanel({
                   submissions.map((sub) => (
                     <tr key={sub.id} className="hover:bg-slate-50/50">
                       <td className="py-3 px-4">
-                        <div className="font-bold text-slate-800">{sub.name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">NIK: {sub.nik}</div>
+                        <div className="flex items-center gap-2.5">
+                          {sub.photo ? (
+                            <img
+                              src={sub.photo}
+                              alt={sub.name}
+                              className="w-9 h-11 object-cover border border-slate-205 bg-slate-100 shrink-0"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-9 h-11 border border-dashed border-slate-250 flex items-center justify-center text-slate-350 text-[8px] shrink-0 bg-slate-50 font-mono">
+                              No Pic
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-bold text-slate-805 uppercase font-sans">{sub.name}</div>
+                            <div className="text-[10px] text-slate-450 font-mono">NIK: {sub.nik}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <div className="font-semibold text-slate-700">{sub.jabatanName}</div>
+                        <div className="font-semibold text-slate-750">{sub.jabatanName}</div>
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <div className="font-bold text-sm text-slate-850">{sub.score}</div>
+                        <div className="font-bold text-sm text-slate-900">{sub.score}</div>
                         <div className="text-[9px] text-slate-400">{sub.correctAnswersCount}/{sub.totalQuestions} Benar</div>
                       </td>
                       <td className="py-3 px-4 text-center font-mono">
@@ -729,7 +1133,7 @@ export default function AdminPanel({
                           {sub.isPassed && (
                             <button
                               onClick={() => onViewCertificateForSubmission(sub)}
-                              className="px-2.5 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-950 font-black border border-teal-300 rounded-none transition text-[10px] font-mono uppercase tracking-wide"
+                              className="px-2.5 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-950 font-black border border-teal-300 rounded-none transition text-[10px] font-mono uppercase tracking-wide cursor-pointer"
                             >
                               Sertifikat
                             </button>
@@ -738,7 +1142,7 @@ export default function AdminPanel({
                             onClick={() => {
                               if (confirm("Hapus baris hasil peserta ini?")) onDeleteSubmission(sub.id);
                             }}
-                            className="p-1.5 text-rose-800 hover:bg-rose-100/50 border border-transparent hover:border-rose-300 rounded-none transition"
+                            className="p-1.5 text-rose-800 hover:bg-rose-100/50 border border-transparent hover:border-rose-350 rounded-none transition"
                             title="Hapus history"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -756,113 +1160,6 @@ export default function AdminPanel({
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "settings" && (
-        <div className="bg-white rounded-none border border-slate-202 p-6 shadow-xs space-y-6">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800">Ubah Konfigurasi Bobot & Batas Waktu</h3>
-            <p className="text-xs text-slate-500">Tentukan nilai KKM (kriteria minimal kelulusan) dan limitasi waktu pengerjaan untuk masing-masing jabatan target.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {jabatanList.map((jab) => (
-              <div key={jab.id} className="p-4 rounded-none border border-slate-200 space-y-4 bg-slate-50/50">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-teal-50 border border-teal-200 text-teal-700 rounded-none">
-                    <Briefcase className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800">{jab.name}</h4>
-                    <p className="text-[10px] text-slate-400">{jab.description.slice(0, 50)}...</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 leading-none uppercase">Limit Waktu (Menit)</label>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="number"
-                        min="1"
-                        max="120"
-                        value={jab.timeLimitMinutes}
-                        onChange={(e) => updateThresholdSetting(jab.id, "timeLimitMinutes", Number(e.target.value))}
-                        className="w-full px-3 py-1 bg-white border border-slate-205 rounded-none text-xs font-mono font-bold"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-1 leading-none uppercase">KKM Minimal (%)</label>
-                    <div className="flex items-center gap-2">
-                      <Percent className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="number"
-                        min="1"
-                        max="100"
-                        value={jab.passingScore}
-                        onChange={(e) => updateThresholdSetting(jab.id, "passingScore", Number(e.target.value))}
-                        className="w-full px-3 py-1 bg-white border border-slate-205 rounded-none text-xs font-mono font-bold"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Custom Admin Password Section */}
-          <div className="border-t border-slate-200 pt-6 mt-6 space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-[#009646]" />
-                Kustomisasi Kata Sandi Admin (REGIONAL H)
-              </h3>
-              <p className="text-xs text-slate-500">Ubah kata sandi default ("admin") dengan kata sandi kustom pilihan Anda sendiri demi meningkatkan keamanan akses panel admin.</p>
-            </div>
-
-            <form onSubmit={handleChangePassword} className="max-w-md space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase leading-none font-mono">KATA SANDI BARU</label>
-                  <input
-                    type="password"
-                    placeholder="Masukkan sandi baru..."
-                    value={newSandi}
-                    onChange={(e) => setNewSandi(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-teal-500 focus:bg-white transition font-mono"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase leading-none font-mono">KONFIRMASI KATA SANDI</label>
-                  <input
-                    type="password"
-                    placeholder="Ulangi sandi baru..."
-                    value={confirmSandi}
-                    onChange={(e) => setConfirmSandi(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none text-xs focus:outline-none focus:border-teal-500 focus:bg-white transition font-mono"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                <div className="text-[10px] text-slate-400">
-                  Kata sandi aktif saat ini: <strong className="text-slate-700 font-mono">{adminPassword}</strong>
-                </div>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-black rounded-none transition uppercase tracking-wider font-sans cursor-pointer whitespace-nowrap"
-                >
-                  Simpan Sandi Kustom
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

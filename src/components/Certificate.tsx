@@ -30,7 +30,17 @@ export default function Certificate({ submission, onBack }: CertificateProps) {
     window.print();
   };
 
-  const generateCertificateImage = () => {
+  const loadImage = (src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement("img");
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+  };
+
+  const generateCertificateImage = async () => {
     setDownloadingImg(true);
     const canvas = canvasRef.current;
     if (!canvas) {
@@ -194,36 +204,38 @@ export default function Certificate({ submission, onBack }: CertificateProps) {
     // Left Signature: HRD
     ctx.font = "bold 20px Arial, sans-serif";
     ctx.fillStyle = "#334155";
-    ctx.fillText("Manager HRD & Recruitment", 400, sigY - 80);
+    ctx.fillText("Manager HRD & Recruitment", 460, sigY - 80);
     // Draw horizontal line for signature
     ctx.strokeStyle = "#94a3b8";
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(250, sigY);
-    ctx.lineTo(550, sigY);
+    ctx.moveTo(310, sigY);
+    ctx.lineTo(610, sigY);
     ctx.stroke();
     // Signature name
     ctx.font = "bold 22.5px Georgia, serif";
     ctx.fillStyle = "#1e293b";
-    ctx.fillText("Amanda Kirana, S.Psi.", 400, sigY + 30);
+    ctx.fillText("Amanda Kirana, S.Psi.", 460, sigY + 30);
     ctx.font = "normal 16px Arial, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText("NIP: 19920412201804", 400, sigY + 55);
+    ctx.fillText("NIP: 19920412201804", 460, sigY + 55);
 
     // Right Signature: Director
     ctx.font = "bold 20px Arial, sans-serif";
     ctx.fillStyle = "#334155";
-    ctx.fillText("Direktur Operasional", w - 400, sigY - 80);
+    ctx.fillText("Direktur Operasional", w - 460, sigY - 80);
     // Draw horizontal line for signature
     ctx.beginPath();
-    ctx.moveTo(w - 550, sigY);
-    ctx.lineTo(w - 250, sigY);
+    ctx.moveTo(w - 610, sigY);
+    ctx.lineTo(w - 310, sigY);
     ctx.stroke();
     // Signature name
-    ctx.fillText("Suryo Kusumo, M.B.A.", w - 400, sigY + 30);
+    ctx.font = "bold 22.5px Georgia, serif";
+    ctx.fillStyle = "#1e293b";
+    ctx.fillText("Suryo Kusumo, M.B.A.", w - 460, sigY + 30);
     ctx.font = "normal 16px Arial, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText("NIP: 19801122200512", w - 400, sigY + 55);
+    ctx.fillText("NIP: 19801122200512", w - 460, sigY + 55);
 
     // 10. Seal Stamp (Deco Circle in Center Bottom)
     ctx.strokeStyle = "rgba(15, 118, 110, 0.4)";
@@ -245,6 +257,34 @@ export default function Certificate({ submission, onBack }: CertificateProps) {
     ctx.fillText("GRADUATED", w / 2, sigY - 50);
     ctx.font = "bold 12px Arial, sans-serif";
     ctx.fillText("VERIFIED OK", w / 2, sigY - 30);
+
+    // Draw Candidate Photo on Canvas if exists
+    if (submission.photo) {
+      try {
+        const img = await loadImage(submission.photo);
+        const photoX = 100;
+        const photoY = sigY - 145;
+        const photoW = 120;
+        const photoH = 160;
+
+        // Draw gold frame around photo
+        ctx.strokeStyle = "#c5a85c";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(photoX, photoY, photoW, photoH);
+
+        // Draw photo
+        ctx.drawImage(img, photoX, photoY, photoW, photoH);
+
+        // Caption text
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.font = "bold 12px Arial, sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.fillText("FOTO PEMEGANG", photoX + photoW / 2, photoY + photoH + 12);
+      } catch (err) {
+        console.error("Gagal load photo ke canvas", err);
+      }
+    }
 
     // Generate link download
     try {
@@ -354,6 +394,19 @@ export default function Certificate({ submission, onBack }: CertificateProps) {
 
           {/* Certificate Signatures Section */}
           <div className="flex justify-between items-end px-10 pb-4 relative">
+            {/* Foto Pemegang on screen */}
+            {submission.photo && (
+              <div className="flex flex-col items-center shrink-0 mr-4">
+                <img
+                  src={submission.photo}
+                  alt={submission.name}
+                  referrerPolicy="no-referrer"
+                  className="w-16 h-20 object-cover border-2 border-[#c5a85c] rounded-none bg-slate-100 shadow-xs"
+                />
+                <span className="text-[7px] font-extrabold text-slate-400 mt-1.5 uppercase font-mono tracking-wider">Foto Pemegang</span>
+              </div>
+            )}
+
             {/* Stamp Logo Center Bottom */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col justify-center items-center text-center">
               <div className="relative w-16 h-16 rounded-full border border-teal-700/30 flex items-center justify-center p-1 bg-white/80">
@@ -443,6 +496,19 @@ export default function Certificate({ submission, onBack }: CertificateProps) {
           </div>
 
           <div className="flex justify-between items-end px-16 pb-8 relative">
+            {/* Foto Pemegang print */}
+            {submission.photo && (
+              <div className="flex flex-col items-center shrink-0 mr-6">
+                <img
+                  src={submission.photo}
+                  alt={submission.name}
+                  referrerPolicy="no-referrer"
+                  className="w-24 h-32 object-cover border-2 border-[#c5a85c] rounded-none bg-slate-100 shadow-sm"
+                />
+                <span className="text-[9px] font-extrabold text-slate-400 mt-2 uppercase font-mono tracking-wider">Foto Pemegang</span>
+              </div>
+            )}
+
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col justify-center items-center text-center">
               <div className="relative w-20 h-20 rounded-full border border-teal-700/30 flex items-center justify-center p-1 bg-white/80">
                 <div className="absolute inset-1 rounded-full border border-dashed border-teal-750/30"></div>
