@@ -97,7 +97,7 @@ export default function AdminPanel({
       setIsAdminAuthenticated(true);
       setAuthError("");
     } else {
-      setAuthError("Sandi Salah! (Sandi default: admin)");
+      setAuthError("Sandi Salah! Silakan hubungi administrator.");
     }
   };
 
@@ -358,11 +358,7 @@ export default function AdminPanel({
               required
             />
             <p className="text-[10px] text-slate-400 mt-1">
-              {adminPassword === "admin" ? (
-                <span>Sandi bawaan pabrik: <strong className="text-teal-700">admin</strong></span>
-              ) : (
-                <span className="text-emerald-700 font-semibold font-mono uppercase tracking-tight">Sandi Kustom Anda Aktif</span>
-              )}
+              <span>Gunakan kata sandi hak akses administrator kustom Anda.</span>
             </p>
           </div>
 

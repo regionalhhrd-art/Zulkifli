@@ -716,16 +716,15 @@ export default function App() {
         <p className="mt-1 font-mono text-[10px] text-slate-350">Platform Mandiri v2.0 • Offline Local Sync</p>
       </footer>
 
-      {/* Small floating admin button at the bottom corner */}
+      {/* Small floating admin button at the bottom corner - Restyled to be clean, white, visible, yet subtle and low-profile */}
       {currentView !== "test" && (
         <button
           id="floating-admin-trigger"
           onClick={() => setCurrentView(currentView === "admin" ? "home" : "admin")}
-          className="no-print fixed bottom-4 right-4 z-50 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center gap-1.5 px-3 py-1.5 shadow-md transition duration-150 text-[10px] font-black uppercase tracking-wider font-mono cursor-pointer select-none rounded-none"
-          title="Kelola Portal (Admin)"
+          className="no-print fixed bottom-4 right-4 z-50 bg-white hover:bg-slate-50 text-slate-400 hover:text-slate-600 border border-slate-200 flex items-center justify-center w-8 h-8 shadow-sm transition duration-150 cursor-pointer select-none rounded-md outline-none"
+          title="Confidential Panel Access"
         >
-          <Settings className="w-3.5 h-3.5 text-teal-400" />
-          <span>Admin</span>
+          <Settings className="w-4 h-4" />
         </button>
       )}
     </div>
