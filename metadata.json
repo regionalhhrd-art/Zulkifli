@@ -1,6 +1,10 @@
 {
   "name": "Aplikasi Pre-Test Karyawan",
   "description": "Sistem pre-test karyawan REGIONAL H dengan login NIK, papan peringkat, sertifikat kelulusan printable, dan panel admin.",
-  "requestFramePermissions": ["camera"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
