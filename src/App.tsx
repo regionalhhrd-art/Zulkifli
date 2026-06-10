@@ -338,6 +338,24 @@ export default function App() {
               </div>
             </div>
 
+            {/* Alur & Aturan Ujian - Moved to second position before Starting Pre-Test Form */}
+            <div className="bg-slate-900 text-white border border-slate-850 rounded-none p-6 space-y-4 relative overflow-hidden animate-fade-in">
+              <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-teal-700/20 pointer-events-none"></div>
+
+              <h4 className="text-xs font-bold font-mono text-teal-400 uppercase tracking-widest pb-2 border-b border-slate-800 flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5" />
+                Alur & Aturan Ujian
+              </h4>
+
+              <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3 text-xs text-slate-300 list-disc pl-5 leading-relaxed">
+                <li>Isian nomor <strong className="text-white">NIK</strong> dan <strong className="text-white font-bold">Nama</strong> resmi wajib diisi presisi sebagai validitas cetak sertifikat.</li>
+                <li>Waktu ujian berjalan terus (Real-time) di server dan sistem client. Jangan menutup atau merefresh tab browser saat pengerjaan berlangsung.</li>
+                <li>Sistem akan <strong className="text-white font-bold">Auto-Submit otomatis</strong> jika batas waktu berakhir.</li>
+                <li>Peserta dinyatakan LULUS apabila memperoleh nilai di atas ambang batas (KKM) jabatan.</li>
+                <li className="md:col-span-2 lg:col-span-1">Peserta yang lulus berhak langsung mengunduh <strong className="text-teal-300 font-bold">Sertifikat Kelulusan Resmi</strong> (PDF/PNG).</li>
+              </ul>
+            </div>
+
             {/* Layout Login Gate */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Form Input NIK & Pilih Jabatan */}
@@ -476,22 +494,6 @@ export default function App() {
 
               {/* Side features details info */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-slate-900 text-white border border-slate-850 rounded-none p-6 space-y-4 relative overflow-hidden">
-                  <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-teal-700/20"></div>
-
-                  <h4 className="text-xs font-bold font-mono text-teal-400 uppercase tracking-widest pb-2 border-b border-slate-800">
-                    Alur & Aturan Ujian
-                  </h4>
-
-                  <ul className="space-y-4 text-xs text-slate-400 pl-4 list-disc leading-relaxed">
-                    <li>Isian nomor <strong className="text-white">NIK</strong> dan <strong className="text-white">Nama</strong> resmi wajib diisi presisi sebagai validitas cetak sertifikat.</li>
-                    <li>Waktu ujian berjalan terus (Real-time) di server dan sistem client. Jangan menutup atau merefresh tab browser saat pengerjaan berlangsung.</li>
-                    <li>Sistem akan <strong className="text-white font-bold">Auto-Submit otomatis</strong> jika batas waktu berakhir.</li>
-                    <li>Peserta dinyatakan LULUS apabila memperoleh nilai di atas ambis KKM minimal jabatan.</li>
-                    <li>Peserta yang lulus berhak langsung mengunduh <strong className="text-teal-200">Sertifikat Kelulusan Resmi</strong> (PDF/PNG).</li>
-                  </ul>
-                </div>
-
                 <div className="bg-white rounded-none border border-slate-200 p-5 shadow-xs">
                   <h4 className="text-xs font-black uppercase tracking-wider mb-4 font-mono text-slate-900">Informasi Kelulusan Terbaru</h4>
                   <div className="space-y-3 text-xs">
