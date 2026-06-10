@@ -33,7 +33,10 @@ import { DEFAULT_JABATAN_LIST, DEFAULT_QUESTIONS, MOCK_SUBMISSIONS } from "./dat
 import { Jabatan, Question, Submission, UserSession } from "./types";
 
 export default function App() {
-  // Persistence Loading from LocalStorage
+  // Sync flag to track database state loads from final-authorized server
+  const [isLoadingSync, setIsLoadingSync] = useState(true);
+
+  // Persistence Loading from LocalStorage (fast fallback)
   const [jabatanList, setJabatanList] = useState<Jabatan[]>(() => {
     const saved = localStorage.getItem("pretest_jabatan_list");
     return saved ? JSON.parse(saved) : DEFAULT_JABATAN_LIST;
@@ -63,34 +66,91 @@ export default function App() {
   // Running State for Exam results
   const [activeSubmission, setActiveSubmission] = useState<Submission | null>(null);
 
-  // Sync to LocalStorage
+  // 1. Initial Load of centralized database on application startup
+  useEffect(() => {
+    async function fetchCentralDatabase() {
+      try {
+        const res = await fetch("/api/data");
+        if (res.ok) {
+          const resJson = await res.json();
+          if (resJson.status === "success" && resJson.data) {
+            const { jabatanList: serverJ, questions: serverQ, submissions: serverS } = resJson.data;
+            if (serverJ && serverJ.length > 0) {
+              setJabatanList(serverJ);
+            }
+            if (serverQ && serverQ.length > 0) {
+              setQuestions(serverQ);
+            }
+            if (serverS) {
+              setSubmissions(serverS);
+            }
+          } else if (resJson.status === "empty") {
+            // First run on new platform deployment - seed server with client datasets
+            await fetch("/api/save", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jabatanList, questions, submissions }),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load central server db, using client defaults:", err);
+      } finally {
+        setIsLoadingSync(false);
+      }
+    }
+    fetchCentralDatabase();
+  }, []);
+
+  // 2. Automated Sync-to-Server and LocalStorage triggers
   useEffect(() => {
     localStorage.setItem("pretest_jabatan_list", JSON.stringify(jabatanList));
-  }, [jabatanList]);
+    if (!isLoadingSync) {
+      fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jabatanList, questions, submissions }),
+      }).catch((e) => console.error("Database sync error (jabatanList):", e));
+    }
+  }, [jabatanList, isLoadingSync]);
 
   useEffect(() => {
     localStorage.setItem("pretest_questions_list", JSON.stringify(questions));
-  }, [questions]);
+    if (!isLoadingSync) {
+      fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jabatanList, questions, submissions }),
+      }).catch((e) => console.error("Database sync error (questions):", e));
+    }
+  }, [questions, isLoadingSync]);
 
   useEffect(() => {
     localStorage.setItem("pretest_submissions_list", JSON.stringify(submissions));
-  }, [submissions]);
+    if (!isLoadingSync) {
+      fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jabatanList, questions, submissions }),
+      }).catch((e) => console.error("Database sync error (submissions):", e));
+    }
+  }, [submissions, isLoadingSync]);
 
-  // Handle multi-quiz catalog initialization & sync
+  // Handle multi-quiz catalog initialization & sync fallback
   useEffect(() => {
+    // Only run initialization safety checks and selections after initial server fetch concludes
+    if (isLoadingSync) return;
+
     const hasSandi = jabatanList.length > 0 && "sandi" in jabatanList[0];
     if (jabatanList.length === 0 || !hasSandi) {
       setJabatanList(DEFAULT_JABATAN_LIST);
       setQuestions(DEFAULT_QUESTIONS);
       setSubmissions(MOCK_SUBMISSIONS);
       setSelectedJabatanId(DEFAULT_JABATAN_LIST[0].id);
-      localStorage.setItem("pretest_jabatan_list", JSON.stringify(DEFAULT_JABATAN_LIST));
-      localStorage.setItem("pretest_questions_list", JSON.stringify(DEFAULT_QUESTIONS));
-      localStorage.setItem("pretest_submissions_list", JSON.stringify(MOCK_SUBMISSIONS));
     } else if (!selectedJabatanId && jabatanList.length > 0) {
       setSelectedJabatanId(jabatanList[0].id);
     }
-  }, [jabatanList, selectedJabatanId]);
+  }, [jabatanList, selectedJabatanId, isLoadingSync]);
 
   const handleStartExam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,7 +378,7 @@ export default function App() {
         {currentView === "home" && (
           <div className="space-y-8 animate-fade-in flex-grow flex flex-col justify-between">
             {/* Landing Banner */}
-            <div className="bg-white border border-slate-200 rounded-none p-6 md:p-8 flex flex-col lg:flex-row items-center gap-6 justify-between relative overflow-hidden">
+            <div className="bg-white border-2 border-slate-900 rounded-none p-6 md:p-8 flex flex-col lg:flex-row items-center gap-6 justify-between relative overflow-hidden shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-200">
               <div className="space-y-2 lg:max-w-2xl text-center lg:text-left">
                 <span className="inline-flex px-2.5 py-1 rounded-none text-[10px] font-black bg-teal-100 text-teal-800 tracking-widest font-mono">
                   REGIONAL H • ASESMEN KOMPETENSI MANDIRI 2026
@@ -332,17 +392,17 @@ export default function App() {
               </div>
 
               {/* Brand Logo Accent */}
-              <div className="hidden lg:flex flex-col items-center justify-center p-4 bg-slate-50 border border-slate-200 shadow-sm shrink-0 rounded-none w-36 text-center select-none">
+              <div className="hidden lg:flex flex-col items-center justify-center p-4 bg-slate-50 border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-200 shrink-0 rounded-none w-36 text-center select-none">
                 <RegionalHLogo size={76} />
                 <span className="text-[10px] font-black tracking-widest text-[#009646] font-sans mt-2">REGIONAL H</span>
               </div>
             </div>
 
             {/* Alur & Aturan Ujian - Moved to second position before Starting Pre-Test Form */}
-            <div className="bg-slate-900 text-white border border-slate-850 rounded-none p-6 space-y-4 relative overflow-hidden animate-fade-in">
-              <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-teal-700/20 pointer-events-none"></div>
+            <div className="bg-slate-950 text-white border-2 border-slate-900 rounded-none p-6 space-y-4 relative overflow-hidden animate-fade-in shadow-[6px_6px_0px_0px_rgba(13,148,136,0.35)] hover:shadow-[8px_8px_0px_0px_rgba(13,148,136,0.45)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-200">
+              <div className="absolute -right-12 -bottom-12 w-48 h-48 rounded-full bg-teal-700/20 pointer-events-none text-teal-400"></div>
 
-              <h4 className="text-xs font-bold font-mono text-teal-400 uppercase tracking-widest pb-2 border-b border-slate-800 flex items-center gap-2">
+              <h4 className="text-xs font-bold font-mono text-teal-400 uppercase tracking-widest pb-2 border-b border-teal-950 flex items-center gap-2">
                 <FileText className="w-3.5 h-3.5" />
                 Alur & Aturan Ujian
               </h4>
@@ -359,9 +419,9 @@ export default function App() {
             {/* Layout Login Gate */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
               {/* Form Input NIK & Pilih Jabatan */}
-              <div className="lg:col-span-7 bg-white rounded-none border border-slate-200 p-6 md:p-8 shadow-xs">
+              <div className="lg:col-span-7 bg-white rounded-none border-2 border-slate-900 p-6 md:p-8 shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] hover:shadow-[10px_10px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-200">
                 <h3 className="text-lg font-black uppercase text-slate-900 mb-6 flex items-center gap-2 tracking-tight">
-                  <Play className="w-4 h-4 text-teal-600 font-bold" />
+                  <Play className="w-4 h-4 text-teal-605 font-bold animate-pulse" />
                   Mulai Lembar Jawaban Pre-Test
                 </h3>
 
@@ -374,7 +434,7 @@ export default function App() {
                         placeholder="Contoh: 317201090..."
                         value={nikInput}
                         onChange={(e) => setNikInput(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-350 rounded-none text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition font-mono"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-900 rounded-none text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition-all font-mono shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] focus:shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]"
                         required
                       />
                     </div>
@@ -385,7 +445,7 @@ export default function App() {
                         placeholder="Contoh: Andi Wijaya"
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 hover:border-slate-350 rounded-none text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition font-sans"
+                        className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-900 rounded-none text-sm focus:outline-none focus:border-teal-500 focus:bg-white transition-all font-sans shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] focus:shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]"
                         required
                       />
                     </div>
@@ -394,13 +454,15 @@ export default function App() {
                   {/* Photo Capture & Upload Widget */}
                   <div className="pt-2">
                     <PhotoCapture photo={photoInput} onChange={setPhotoInput} />
-                  </div>                  {/* Dasbor Bank Soal (Quiz Catalog Dashboard) */}
+                  </div>
+
+                  {/* Dasbor Bank Soal (Quiz Catalog Dashboard) */}
                   <div className="space-y-3">
                     <label className="block text-[10px] font-black text-slate-500 tracking-wider uppercase font-mono flex items-center gap-1">
                       <FileText className="w-3.5 h-3.5 text-teal-600" />
                       DASBOR BANK SOAL / DAFTAR PILIHAN KUIS ({jabatanList.length})
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {jabatanList.map((jab) => {
                         const isSelected = selectedJabatanId === jab.id;
                         const jobQCount = questions.filter((q) => q.jabatanId === jab.id).length;
@@ -411,10 +473,10 @@ export default function App() {
                               setSelectedJabatanId(jab.id);
                               setSandiInput(""); // Clear PIN entry when changing quiz
                             }}
-                            className={`p-4 border text-left cursor-pointer transition rounded-none relative overflow-hidden flex flex-col justify-between h-36 ${
+                            className={`p-4 text-left cursor-pointer transition-all duration-150 rounded-none relative overflow-hidden flex flex-col justify-between h-36 ${
                               isSelected
-                                ? "bg-teal-50/45 border-teal-500 ring-1 ring-teal-500"
-                                : "bg-slate-50/50 border-slate-200 hover:border-slate-350 hover:bg-white"
+                                ? "bg-teal-50/70 border-2 border-teal-600 shadow-[4px_4px_0px_0px_#0d9488] -translate-x-0.5 -translate-y-0.5"
+                                : "bg-white border-2 border-slate-900 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:shadow-[5px_5px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5"
                             }`}
                           >
                             <div>
@@ -423,16 +485,16 @@ export default function App() {
                                   {jab.name}
                                 </h4>
                                 {isSelected ? (
-                                  <span className="shrink-0 bg-teal-500 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-none font-mono">
+                                  <span className="shrink-0 bg-teal-500 border border-slate-900 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-none font-mono">
                                     AKTIF
                                   </span>
                                 ) : (
-                                  <span className="shrink-0 bg-slate-200 text-slate-600 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-none flex items-center gap-0.5">
-                                    PIN
+                                  <span className="shrink-0 bg-slate-100 border border-slate-205 text-slate-600 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-none flex items-center gap-0.5">
+                                    SECURE
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-slate-450 line-clamp-2 mt-1.5 leading-snug font-sans">
+                              <p className="text-[11px] text-slate-500 line-clamp-2 mt-1.5 leading-snug font-sans">
                                 {jab.description}
                               </p>
                             </div>
@@ -452,30 +514,30 @@ export default function App() {
 
                   {/* 2-Digit Passcode / Sandi Entry Widget */}
                   {selectedJobObj && (
-                    <div className="p-4 bg-amber-50/50 border border-amber-200 rounded-none space-y-2.5 animate-fade-in text-left">
+                    <div className="p-4 bg-amber-50 border-2 border-amber-500 shadow-[4px_4px_0px_0px_#f59e0b] rounded-none space-y-2.5 animate-fade-in text-left">
                       <div className="flex items-center gap-1.5 text-amber-900 font-extrabold font-mono text-[10px] uppercase tracking-wider">
                         <Lock className="w-3.5 h-3.5 text-amber-720" />
-                        Sandi Kunci Akses Kuis "{selectedJobObj.name}"
+                        Akses Kunci Kuis "{selectedJobObj.name}"
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                         <input
                           type="text"
                           maxLength={2}
                           value={sandiInput}
-                          placeholder="Pin 2 Angka..."
+                          placeholder="PIN.."
                           onChange={(e) => setSandiInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                          className="px-3 py-2 bg-white border border-amber-300 text-slate-800 text-center font-black font-mono tracking-widest text-lg w-full sm:w-44 rounded-none outline-none focus:border-amber-500"
+                          className="px-3 py-2 bg-white border-2 border-amber-400 text-slate-800 text-center font-black font-mono tracking-widest text-lg w-full sm:w-28 rounded-none outline-none focus:border-amber-600 focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all"
                           required
                         />
                         <span className="text-[10px] text-amber-800 leading-snug">
-                          *Materi kuis ini terproteksi sandi. Masukkan 1-2 digit pin kuis ini untuk melakukan konfirmasi verifikasi dimulainya ujian.
+                          *Materi kuis terproteksi sandi pengawas. Masukkan 1-2 digit pin kuis untuk konfirmasi verifikasi pengerjaan.
                         </span>
                       </div>
                     </div>
                   )}
 
                   {selectedJobQuestions.length === 0 ? (
-                    <div className="p-4 bg-rose-50/50 text-rose-800 rounded-none border border-rose-200 text-xs flex gap-2">
+                    <div className="p-4 bg-rose-50 text-rose-850 rounded-none border-2 border-rose-500 text-xs flex gap-2">
                       <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
                       <div>
                         <strong>Peringatan!</strong> Kuis pilihan Anda tidak memiliki pertanyaan aktif di bank soal. Silakan hubungi Administrator.
@@ -484,7 +546,7 @@ export default function App() {
                   ) : (
                     <button
                       type="submit"
-                      className="w-full text-center py-4 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-none transition duration-150 cursor-pointer shadow-xs"
+                      className="w-full text-center py-4 bg-teal-500 hover:bg-teal-400 border-2 border-slate-900 text-slate-950 font-black text-xs uppercase tracking-wider rounded-none shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-150 cursor-pointer active:translate-x-0 active:translate-y-0 active:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]"
                     >
                       Mulai Pre-Test Sekarang
                     </button>
@@ -494,17 +556,17 @@ export default function App() {
 
               {/* Side features details info */}
               <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white rounded-none border border-slate-200 p-5 shadow-xs">
+                <div className="bg-white rounded-none border-2 border-slate-900 p-5 shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:shadow-[8px_8px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-200">
                   <h4 className="text-xs font-black uppercase tracking-wider mb-4 font-mono text-slate-900">Informasi Kelulusan Terbaru</h4>
                   <div className="space-y-3 text-xs">
                     {submissions.slice(0, 3).map((sub) => (
-                      <div key={sub.id} className="flex items-center justify-between border-b border-slate-50 pb-2.5 last:border-b-0 last:pb-0">
+                      <div key={sub.id} className="flex items-center justify-between border-b border-slate-100 pb-2.5 last:border-b-0 last:pb-0">
                         <div>
                           <div className="font-black text-slate-900 uppercase font-sans tracking-tight">{sub.name}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{sub.jabatanName}</div>
                         </div>
                         <div className="text-right">
-                          <span className={`font-mono font-bold px-2 py-0.5 rounded-none ${sub.isPassed ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
+                          <span className={`font-mono font-bold px-2 py-0.5 rounded-none border border-slate-900 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] ${sub.isPassed ? "bg-emerald-55 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
                             Skor: {sub.score}%
                           </span>
                         </div>

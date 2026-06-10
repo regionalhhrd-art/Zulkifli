@@ -200,52 +200,53 @@ export default function PhotoCapture({ photo, onChange }: PhotoCaptureProps) {
       </div>
 
       {photo ? (
-        // Preview State
-        <div className="flex flex-col sm:flex-row items-center gap-5 p-4 bg-teal-50/50 border border-teal-100 relative">
-          <div className="relative shrink-0 w-24 h-32 bg-slate-100 border-2 border-teal-500 overflow-hidden shadow-sm">
+        // Preview State - Compact and 3D floating passport preview
+        <div className="flex flex-row items-center gap-4 p-3 bg-white border-2 border-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all hover:shadow-[6px_6px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5">
+          <div className="relative shrink-0 w-20 h-24 bg-slate-100 border-2 border-slate-900 overflow-hidden shadow-sm">
             <img src={photo} alt="Profile preview" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-            <div className="absolute top-1 right-1 bg-teal-500 text-slate-950 p-1">
-              <Check className="w-3 h-3 font-black" />
+            <div className="absolute top-0 right-0 bg-teal-500 border-l border-b border-slate-900 text-slate-950 p-0.5">
+              <Check className="w-3 h-3 font-extrabold" />
             </div>
           </div>
-          <div className="space-y-2 text-center sm:text-left flex-1">
-            <h5 className="font-bold text-slate-800 text-sm">Foto Berhasil Tertangkap!</h5>
-            <p className="text-slate-500 leading-relaxed text-[11px]">
-              Dokumentasi portrait wajah Anda telah berhasil dimuat secara aman. Foto ini akan otomatis terintegrasi pada lembar ujian resmi dan berkas cetak sertifikat kelulusan HRD.
+          <div className="space-y-1.5 text-left flex-1">
+            <h5 className="font-extrabold text-slate-800 text-xs">Foto Muat Sukses!</h5>
+            <p className="text-slate-500 leading-snug text-[10px]">
+              Foto siap digunakan untuk kelengkapan cetak sertifikat HRD.
             </p>
             <button
               type="button"
               onClick={clearPhoto}
-              className="inline-flex items-center gap-1.5 bg-white border border-rose-200 hover:border-rose-400 text-rose-700 font-bold px-3 py-1.5 transition text-[10px] uppercase font-mono cursor-pointer"
+              className="inline-flex items-center gap-1 bg-rose-50 border border-rose-300 hover:bg-rose-100 text-rose-700 font-extrabold px-2 py-1 transition-all text-[9px] uppercase font-mono cursor-pointer rounded-none shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-0.5"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Retake / Hapus Foto
+              <Trash2 className="w-3 h-3" />
+              Retake / Hapus
             </button>
           </div>
         </div>
       ) : (
-        // Capture/Upload State
-        <div className="border border-slate-205 bg-slate-50 overflow-hidden">
+        // Capture/Upload State - Extremely neat, side-by-side when webcam is active
+        <div className="border-2 border-slate-900 bg-white p-3 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all hover:shadow-[5px_5px_0px_0px_rgba(15,23,42,1)]">
           {activeTab === "camera" ? (
-            <div className="p-4 flex flex-col items-center justify-center min-h-[220px] relative text-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 min-h-[140px] relative">
               {cameraError ? (
-                <div className="p-4 space-y-3 max-w-sm">
-                  <AlertCircle className="w-8 h-8 text-rose-600 mx-auto" />
-                  <p className="text-[11px] text-rose-800 font-medium leading-relaxed">{cameraError}</p>
+                <div className="p-2 space-y-2 text-center max-w-sm">
+                  <AlertCircle className="w-6 h-6 text-rose-650 mx-auto" />
+                  <p className="text-[10px] text-rose-800 leading-snug">{cameraError}</p>
                   <button
                     type="button"
                     onClick={() => {
                       setCameraError(null);
                       setActiveTab("upload");
                     }}
-                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold font-mono uppercase text-[9px] border border-slate-300 rounded-none cursor-pointer"
+                    className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold font-mono uppercase text-[8px] border-2 border-slate-900 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] cursor-pointer"
                   >
                     Beralih Ke Unggah File
                   </button>
                 </div>
               ) : (
-                <div className="w-full max-w-xs space-y-3 flex flex-col items-center">
-                  <div className="w-48 h-48 bg-slate-900 border border-slate-800 relative flex items-center justify-center overflow-hidden">
+                <div className="w-full flex flex-col sm:flex-row items-center gap-4">
+                  {/* Camera Screen - Compact w-32 h-32 */}
+                  <div className="w-32 h-32 bg-slate-950 border-2 border-slate-900 relative flex items-center justify-center overflow-hidden shrink-0 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]">
                     {/* Live Video Viewport */}
                     <video
                       ref={videoRef}
@@ -255,47 +256,53 @@ export default function PhotoCapture({ photo, onChange }: PhotoCaptureProps) {
                       style={{ display: stream ? "block" : "none" }}
                     />
                     {!stream && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-3 text-slate-400">
-                        <Camera className="w-8 h-8 animate-pulse text-slate-500 mb-2" />
-                        <span className="text-[10px] font-mono uppercase tracking-wide">
-                          {isCameraStarting ? "Memulai Kamera..." : "Kamera Non-Aktif"}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-slate-400">
+                        <Camera className="w-6 h-6 animate-pulse text-slate-500 mb-1" />
+                        <span className="text-[8px] font-mono uppercase tracking-wide text-slate-500">
+                          {isCameraStarting ? "Memulai..." : "Non-Aktif"}
                         </span>
                       </div>
                     )}
                   </div>
 
-                  {stream ? (
-                    <button
-                      type="button"
-                      onClick={capturePhoto}
-                      className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-[10px] uppercase tracking-wider font-mono cursor-pointer flex items-center gap-1.5 rounded-none"
-                    >
-                      <Camera className="w-3.5 h-3.5" />
-                      Ambil Foto Sekarang
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={startCamera}
-                      disabled={isCameraStarting}
-                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[10px] uppercase tracking-wider font-mono cursor-pointer flex items-center gap-1.5 rounded-none disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${isCameraStarting ? "animate-spin" : ""}`} />
-                      Aktifkan Webcam
-                    </button>
-                  )}
+                  {/* Actions Right Hand Panel */}
+                  <div className="flex-1 space-y-2 text-center sm:text-left">
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                      Posisikan wajah tegak lurus di depan kamera portal ujian untuk verifikasi wajah otomatis.
+                    </p>
+                    {stream ? (
+                      <button
+                        type="button"
+                        onClick={capturePhoto}
+                        className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-450 border-2 border-slate-900 text-slate-950 font-black text-[9px] uppercase tracking-wider font-mono cursor-pointer flex items-center gap-1 mx-auto sm:mx-0 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(15,23,42,1)] transition-all"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        Ambil Foto Sekarang
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        disabled={isCameraStarting}
+                        className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-850 border-2 border-slate-900 text-white font-bold text-[9px] uppercase tracking-wider font-mono cursor-pointer flex items-center gap-1 mx-auto sm:mx-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 active:translate-x-0 active:translate-y-0 active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isCameraStarting ? "animate-spin" : ""}`} />
+                        Aktifkan Webcam
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
           ) : (
-            // Upload Tab
+            // Upload Tab - Slimmed down
             <div
               onDragEnter={handleDrag}
               onDragOver={handleDrag}
               onDragLeave={handleDrag}
               onDrop={handleDrop}
-              className={`p-6 flex flex-col items-center justify-center min-h-[220px] transition text-center cursor-pointer ${
-                dragActive ? "bg-teal-50/50 border-2 border-dashed border-teal-450" : "hover:bg-slate-100/50"
+              className={`p-4 flex flex-col items-center justify-center min-h-[140px] transition text-center cursor-pointer border border-dashed ${
+                dragActive ? "bg-teal-50/50 border-teal-500" : "hover:bg-slate-50 border-slate-200"
               }`}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -306,15 +313,12 @@ export default function PhotoCapture({ photo, onChange }: PhotoCaptureProps) {
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <Upload className="w-8 h-8 text-slate-400 mb-3" />
-              <p className="font-bold text-slate-700 mb-1">Tarik & Lepas file foto Anda di sini</p>
-              <p className="text-slate-400 text-[10px] mb-3">atau klik di sini untuk menelusuri berkas dari perangkat Anda</p>
-              <span className="inline-block px-3 py-1.5 bg-slate-900 text-white font-mono uppercase tracking-wider text-[9px] font-bold">
-                PILIH BERKAS GAMBAR
+              <Upload className="w-6 h-6 text-slate-400 mb-2" />
+              <p className="font-bold text-slate-700 text-[11px] mb-0.5">Tarik & Lepas gambar Anda di sini</p>
+              <p className="text-slate-450 text-[9px] mb-2.5">atau telusuri dari files folder perangkat Anda</p>
+              <span className="inline-block px-2.5 py-1 bg-slate-900 text-white border border-slate-900 font-mono uppercase tracking-wider text-[8px] font-extrabold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                PILIH FILE FOTO
               </span>
-              <p className="text-[9px] text-slate-400 mt-4 leading-relaxed font-mono">
-                Format yang didukung: JPG, JPEG, PNG • Maksimal file 4 MB
-              </p>
             </div>
           )}
         </div>
