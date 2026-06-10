@@ -14,6 +14,12 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 // Serve API routes first
 app.get("/api/data", (req, res) => {
   try {
+    // Prevent caching on the browser side completely for the database API
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+
     if (fs.existsSync(DATA_FILE_PATH)) {
       const rawData = fs.readFileSync(DATA_FILE_PATH, "utf8");
       const parsed = JSON.parse(rawData);
@@ -43,6 +49,35 @@ app.post("/api/save", (req, res) => {
     return res.json({ status: "success", message: "Central database updated successfully." });
   } catch (error: any) {
     console.error("API error writing data:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
+// Separate endpoint to append a user single exam submission
+app.post("/api/submit", (req, res) => {
+  try {
+    const { submission } = req.body;
+    if (!submission) {
+      return res.status(400).json({ status: "error", message: "Submission data required." });
+    }
+
+    let payload: any = { jabatanList: [], questions: [], submissions: [] };
+    if (fs.existsSync(DATA_FILE_PATH)) {
+      const rawData = fs.readFileSync(DATA_FILE_PATH, "utf8");
+      payload = JSON.parse(rawData);
+    }
+
+    if (!payload.submissions) {
+      payload.submissions = [];
+    }
+
+    // Guard against duplicate submissions if needed, and insert/append
+    payload.submissions.unshift(submission);
+
+    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(payload, null, 2), "utf8");
+    return res.json({ status: "success", message: "Exam result saved to server successfully." });
+  } catch (error: any) {
+    console.error("API error during submission save:", error);
     return res.status(500).json({ status: "error", message: error.message });
   }
 });

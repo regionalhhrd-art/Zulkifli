@@ -66,11 +66,21 @@ export default function App() {
   // Running State for Exam results
   const [activeSubmission, setActiveSubmission] = useState<Submission | null>(null);
 
+  // helper to push master state directly to the server (only called during designated admin edits)
+  const syncDatabaseToServer = (jList: Jabatan[], qList: Question[], sList: Submission[]) => {
+    fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jabatanList: jList, questions: qList, submissions: sList }),
+    }).catch((e) => console.error("Database master sync error:", e));
+  };
+
   // 1. Initial Load of centralized database on application startup
   useEffect(() => {
     async function fetchCentralDatabase() {
       try {
-        const res = await fetch("/api/data");
+        // Appending a timestamp (cache bust) ensures browsers always download fresh questions
+        const res = await fetch(`/api/data?t=${Date.now()}`);
         if (res.ok) {
           const resJson = await res.json();
           if (resJson.status === "success" && resJson.data) {
@@ -102,39 +112,18 @@ export default function App() {
     fetchCentralDatabase();
   }, []);
 
-  // 2. Automated Sync-to-Server and LocalStorage triggers
+  // 2. LocalStorage triggers (no automatic, ambient background POST saves to avoid data overwrites)
   useEffect(() => {
     localStorage.setItem("pretest_jabatan_list", JSON.stringify(jabatanList));
-    if (!isLoadingSync) {
-      fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jabatanList, questions, submissions }),
-      }).catch((e) => console.error("Database sync error (jabatanList):", e));
-    }
-  }, [jabatanList, isLoadingSync]);
+  }, [jabatanList]);
 
   useEffect(() => {
     localStorage.setItem("pretest_questions_list", JSON.stringify(questions));
-    if (!isLoadingSync) {
-      fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jabatanList, questions, submissions }),
-      }).catch((e) => console.error("Database sync error (questions):", e));
-    }
-  }, [questions, isLoadingSync]);
+  }, [questions]);
 
   useEffect(() => {
     localStorage.setItem("pretest_submissions_list", JSON.stringify(submissions));
-    if (!isLoadingSync) {
-      fetch("/api/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jabatanList, questions, submissions }),
-      }).catch((e) => console.error("Database sync error (submissions):", e));
-    }
-  }, [submissions, isLoadingSync]);
+  }, [submissions]);
 
   // Handle multi-quiz catalog initialization & sync fallback
   useEffect(() => {
@@ -227,10 +216,17 @@ export default function App() {
       photo: userSession.photo
     };
 
-    // Add submission
+    // Add submission locally
     setSubmissions((prev) => [newSub, ...prev]);
     setActiveSubmission(newSub);
     setCurrentView("result");
+
+    // Persist single submission to server safely (this preserves admin edits on other browsers simultaneously)
+    fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ submission: newSub })
+    }).catch(e => console.error("Error submitting test results:", e));
   };
 
   const handleCancelTest = () => {
@@ -243,28 +239,38 @@ export default function App() {
 
   // Admin Actions Router handlers
   const handleAddQuestion = (newQ: Question) => {
-    setQuestions((prev) => [...prev, newQ]);
+    const updated = [...questions, newQ];
+    setQuestions(updated);
+    syncDatabaseToServer(jabatanList, updated, submissions);
   };
 
   const handleDeleteQuestion = (id: string) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== id));
+    const updated = questions.filter((q) => q.id !== id);
+    setQuestions(updated);
+    syncDatabaseToServer(jabatanList, updated, submissions);
   };
 
   const handleUpdateQuestion = (updatedQ: Question) => {
-    setQuestions((prev) => prev.map((q) => (q.id === updatedQ.id ? updatedQ : q)));
+    const updated = questions.map((q) => (q.id === updatedQ.id ? updatedQ : q));
+    setQuestions(updated);
+    syncDatabaseToServer(jabatanList, updated, submissions);
   };
 
   const handleUpdateJabatanSettings = (updated: Jabatan[]) => {
     setJabatanList(updated);
+    syncDatabaseToServer(updated, questions, submissions);
   };
 
   const handleDeleteSubmission = (id: string) => {
-    setSubmissions((prev) => prev.filter((s) => s.id !== id));
+    const updated = submissions.filter((s) => s.id !== id);
+    setSubmissions(updated);
+    syncDatabaseToServer(jabatanList, questions, updated);
   };
 
   const handleResetAllData = () => {
     setSubmissions([]); // Clear list
     localStorage.removeItem("pretest_submissions_list");
+    syncDatabaseToServer(jabatanList, questions, []);
   };
 
   const handleLogOutUser = () => {
