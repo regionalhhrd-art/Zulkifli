@@ -135,11 +135,33 @@ export default function App() {
       setJabatanList(DEFAULT_JABATAN_LIST);
       setQuestions(DEFAULT_QUESTIONS);
       setSubmissions(MOCK_SUBMISSIONS);
-      setSelectedJabatanId(DEFAULT_JABATAN_LIST[0].id);
+      
+      const params = new URLSearchParams(window.location.search);
+      const kuisParam = params.get("kuis") || params.get("id");
+      const initialId = kuisParam && DEFAULT_JABATAN_LIST.some(j => j.id === kuisParam) 
+        ? kuisParam 
+        : DEFAULT_JABATAN_LIST[0].id;
+      setSelectedJabatanId(initialId);
     } else if (!selectedJabatanId && jabatanList.length > 0) {
-      setSelectedJabatanId(jabatanList[0].id);
+      const params = new URLSearchParams(window.location.search);
+      const kuisParam = params.get("kuis") || params.get("id");
+      const initialId = kuisParam && jabatanList.some(j => j.id === kuisParam) 
+        ? kuisParam 
+        : jabatanList[0].id;
+      setSelectedJabatanId(initialId);
     }
   }, [jabatanList, selectedJabatanId, isLoadingSync]);
+
+  // Synchronize current selectedJabatanId to browser URL query parameter so the URL in details matches active quiz selection
+  useEffect(() => {
+    if (selectedJabatanId && !isLoadingSync) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("kuis") !== selectedJabatanId) {
+        url.searchParams.set("kuis", selectedJabatanId);
+        window.history.replaceState({}, "", url.toString());
+      }
+    }
+  }, [selectedJabatanId, isLoadingSync]);
 
   const handleStartExam = (e: React.FormEvent) => {
     e.preventDefault();
@@ -491,13 +513,45 @@ export default function App() {
                                   {jab.name}
                                 </h4>
                                 {isSelected ? (
-                                  <span className="shrink-0 bg-teal-500 border border-slate-900 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-none font-mono">
-                                    AKTIF
-                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0 select-none">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const shareUrl = `${window.location.origin}${window.location.pathname}?kuis=${jab.id}`;
+                                        navigator.clipboard.writeText(shareUrl)
+                                          .then(() => alert(`Tautan kuis "${jab.name}" berhasil disalin! Kirimkan link ini ke calon peserta.`))
+                                          .catch(() => alert("Gagal menyalin link."));
+                                      }}
+                                      className="px-1.5 py-0.5 text-[8px] font-bold bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-800 rounded-none cursor-pointer"
+                                      title="Salin Tautan Kuis"
+                                    >
+                                      BAGIKAN
+                                    </button>
+                                    <span className="bg-teal-500 border border-slate-900 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-none font-mono">
+                                      AKTIF
+                                    </span>
+                                  </div>
                                 ) : (
-                                  <span className="shrink-0 bg-slate-100 border border-slate-205 text-slate-600 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-none flex items-center gap-0.5">
-                                    SECURE
-                                  </span>
+                                  <div className="flex items-center gap-1.5 shrink-0 select-none">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const shareUrl = `${window.location.origin}${window.location.pathname}?kuis=${jab.id}`;
+                                        navigator.clipboard.writeText(shareUrl)
+                                          .then(() => alert(`Tautan kuis "${jab.name}" berhasil disalin!`))
+                                          .catch(() => alert("Gagal menyalin link."));
+                                      }}
+                                      className="px-1.5 py-0.5 text-[8px] font-medium bg-slate-100 hover:bg-slate-200 border border-slate-205 text-slate-600 rounded-none cursor-pointer"
+                                      title="Salin Tautan Kuis"
+                                    >
+                                      BAGIKAN
+                                    </button>
+                                    <span className="bg-slate-100 border border-slate-205 text-slate-600 text-[8px] font-mono font-black px-1.5 py-0.5 rounded-none flex items-center gap-0.5">
+                                      SECURE
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                               <p className="text-[11px] text-slate-500 line-clamp-2 mt-1.5 leading-snug font-sans">

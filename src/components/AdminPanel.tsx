@@ -892,12 +892,25 @@ export default function AdminPanel({
                   return (
                     <div key={jab.id} className="p-4 rounded-none border border-slate-200 space-y-3 bg-slate-50 relative group">
                       
-                      {/* Delete button absolutely positioned inside item */}
-                      <div className="absolute top-3 right-3 select-none">
+                      {/* Delete and share button absolutely positioned inside item */}
+                      <div className="absolute top-3 right-3 select-none flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const shareUrl = `${window.location.origin}${window.location.pathname}?kuis=${jab.id}`;
+                            navigator.clipboard.writeText(shareUrl)
+                              .then(() => alert(`Tautan kuis "${jab.name}" berhasil disalin! Silakan bagikan tautan ini ke karyawan.`))
+                              .catch(() => alert("Gagal menyalin link."));
+                          }}
+                          className="px-2 py-1 bg-white border border-teal-200 hover:bg-teal-50 text-[10px] font-black uppercase text-teal-700 font-mono tracking-wider transition cursor-pointer"
+                          title="Salin Tautan Kuis Spesifik Ini"
+                        >
+                          Salin Link
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteQuiz(jab.id, jab.name)}
-                          className="px-2 py-1 hover:bg-rose-100 text-[10px] font-black uppercase text-rose-700 font-mono tracking-wider transition border border-rose-200 cursor-pointer"
+                          className="px-2 py-1 bg-white border border-rose-200 hover:bg-rose-100 text-[10px] font-black uppercase text-rose-700 font-mono tracking-wider transition cursor-pointer"
                           title="Hapus kuis ini dari bank soal"
                         >
                           Hapus Kuis
