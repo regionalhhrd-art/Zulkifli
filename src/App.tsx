@@ -125,30 +125,36 @@ export default function App() {
     localStorage.setItem("pretest_submissions_list", JSON.stringify(submissions));
   }, [submissions]);
 
-  // Handle multi-quiz catalog initialization & sync fallback
+  // Handle multi-quiz catalog initialization & reactive sync with URL query parameters
   useEffect(() => {
     // Only run initialization safety checks and selections after initial server fetch concludes
     if (isLoadingSync) return;
 
     const hasSandi = jabatanList.length > 0 && "sandi" in jabatanList[0];
+    let currentJabatanList = jabatanList;
     if (jabatanList.length === 0 || !hasSandi) {
       setJabatanList(DEFAULT_JABATAN_LIST);
       setQuestions(DEFAULT_QUESTIONS);
       setSubmissions(MOCK_SUBMISSIONS);
-      
-      const params = new URLSearchParams(window.location.search);
-      const kuisParam = params.get("kuis") || params.get("id");
-      const initialId = kuisParam && DEFAULT_JABATAN_LIST.some(j => j.id === kuisParam) 
-        ? kuisParam 
-        : DEFAULT_JABATAN_LIST[0].id;
-      setSelectedJabatanId(initialId);
-    } else if (!selectedJabatanId && jabatanList.length > 0) {
-      const params = new URLSearchParams(window.location.search);
-      const kuisParam = params.get("kuis") || params.get("id");
-      const initialId = kuisParam && jabatanList.some(j => j.id === kuisParam) 
-        ? kuisParam 
-        : jabatanList[0].id;
-      setSelectedJabatanId(initialId);
+      currentJabatanList = DEFAULT_JABATAN_LIST;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const kuisParam = params.get("kuis") || params.get("id");
+
+    if (kuisParam && currentJabatanList.length > 0) {
+      const exists = currentJabatanList.some(j => j.id === kuisParam);
+      if (exists) {
+        if (selectedJabatanId !== kuisParam) {
+          setSelectedJabatanId(kuisParam);
+        }
+      } else {
+        if (!selectedJabatanId) {
+          setSelectedJabatanId(currentJabatanList[0].id);
+        }
+      }
+    } else if (currentJabatanList.length > 0 && !selectedJabatanId) {
+      setSelectedJabatanId(currentJabatanList[0].id);
     }
   }, [jabatanList, selectedJabatanId, isLoadingSync]);
 
@@ -293,6 +299,35 @@ export default function App() {
     setSubmissions([]); // Clear list
     localStorage.removeItem("pretest_submissions_list");
     syncDatabaseToServer(jabatanList, questions, []);
+  };
+
+  const handleRefreshSubmissions = async () => {
+    try {
+      const res = await fetch(`/api/data?t=${Date.now()}`);
+      if (res.ok) {
+        const resJson = await res.json();
+        if (resJson.status === "success" && resJson.data) {
+          const { jabatanList: serverJ, questions: serverQ, submissions: serverS } = resJson.data;
+          if (serverJ && serverJ.length > 0) {
+            setJabatanList(serverJ);
+          }
+          if (serverQ && serverQ.length > 0) {
+            setQuestions(serverQ);
+          }
+          if (serverS) {
+            setSubmissions(serverS);
+          }
+          alert("Sukses memperbarui data! Semua hasil ujian pre-test peserta terbaru berhasil dimuat.");
+        } else {
+          alert("Gagal membaca database terbaru dari server.");
+        }
+      } else {
+        alert("Gagal menghubungi server untuk mengambil data riwayat pre-test.");
+      }
+    } catch (err) {
+      console.error("Gagal memperbarui data:", err);
+      alert("Terjadi kesalahan jaringan.");
+    }
   };
 
   const handleLogOutUser = () => {
@@ -825,6 +860,7 @@ export default function App() {
             onUpdateJabatanSettings={handleUpdateJabatanSettings}
             onDeleteSubmission={handleDeleteSubmission}
             onResetAllData={handleResetAllData}
+            onRefreshSubmissions={handleRefreshSubmissions}
             onViewCertificateForSubmission={(sub) => {
               setActiveSubmission(sub);
               setCurrentView("certificate");

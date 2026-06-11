@@ -23,7 +23,8 @@ import {
   Download,
   Key,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { Question, Jabatan, Submission } from "../types";
 import RegionalHLogo from "./RegionalHLogo";
@@ -39,6 +40,7 @@ interface AdminPanelProps {
   onDeleteSubmission: (id: string) => void;
   onResetAllData: () => void;
   onViewCertificateForSubmission: (sub: Submission) => void;
+  onRefreshSubmissions: () => Promise<void>;
 }
 
 export default function AdminPanel({
@@ -51,8 +53,23 @@ export default function AdminPanel({
   onUpdateJabatanSettings,
   onDeleteSubmission,
   onResetAllData,
-  onViewCertificateForSubmission
+  onViewCertificateForSubmission,
+  onRefreshSubmissions
 }: AdminPanelProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefreshClick = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefreshSubmissions();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>("");
   const [authError, setAuthError] = useState<string>("");
@@ -1049,6 +1066,16 @@ export default function AdminPanel({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleRefreshClick}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 border border-teal-700 text-white text-xs font-black px-4 py-2.5 rounded-none transition cursor-pointer font-mono uppercase tracking-wider duration-150 shadow-xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                {isRefreshing ? "Memuat..." : "Refresh Data"}
+              </button>
+
               <button
                 onClick={handleExportExcel}
                 className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 border border-emerald-700 text-white text-xs font-black px-4 py-2.5 rounded-none transition cursor-pointer font-mono uppercase tracking-wider duration-150 shadow-xs"
