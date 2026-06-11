@@ -135,18 +135,118 @@ export default function Leaderboard({ submissions, jabatanList }: LeaderboardPro
                     key={sub.id}
                     className={`hover:bg-slate-50/50 transition duration-150 ${
                       rank === 1
-                        ? "bg-amber-50/10"
+                        ? "bg-amber-500/5 font-medium"
                         : rank === 2
-                        ? "bg-slate-50/10"
+                        ? "bg-slate-500/5"
                         : rank === 3
-                        ? "bg-amber-700/5:"
+                        ? "bg-amber-700/5"
                         : ""
                     }`}
                   >
                     <td className="py-4 px-4 whitespace-nowrap">{rankWidget}</td>
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="font-bold text-slate-850">{sub.name}</div>
-                      <div className="text-[11px] font-mono text-slate-400 tracking-wider">NIK: {sub.nik}</div>
+                      <div className="flex items-center gap-4">
+                        {/* Custom Medal Themed Photo Frame */}
+                        {rank === 1 ? (
+                          <div className="relative flex-shrink-0">
+                            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 opacity-75 blur-[2px] animate-pulse"></span>
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-amber-400 shadow-xs bg-white">
+                              {sub.photo ? (
+                                <img
+                                  src={sub.photo}
+                                  alt={sub.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-amber-50 flex items-center justify-center text-amber-700 font-bold font-mono text-sm uppercase">
+                                  {sub.name.slice(0, 2)}
+                                </div>
+                              )}
+                            </div>
+                            <span className="absolute -bottom-1 -right-1 bg-amber-505 text-slate-950 rounded-full p-0.5 border border-white shadow-xs flex items-center justify-center">
+                              <Award className="w-3 h-3 text-white fill-amber-700" />
+                            </span>
+                          </div>
+                        ) : rank === 2 ? (
+                          <div className="relative flex-shrink-0">
+                            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-slate-350 to-slate-250 opacity-75 blur-[2px]"></span>
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-slate-300 shadow-xs bg-white">
+                              {sub.photo ? (
+                                <img
+                                  src={sub.photo}
+                                  alt={sub.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold font-mono text-sm uppercase">
+                                  {sub.name.slice(0, 2)}
+                                </div>
+                              )}
+                            </div>
+                            <span className="absolute -bottom-1 -right-1 bg-slate-400 text-white rounded-full p-0.5 border border-white shadow-xs flex items-center justify-center">
+                              <Award className="w-3 h-3 text-white fill-slate-300" />
+                            </span>
+                          </div>
+                        ) : rank === 3 ? (
+                          <div className="relative flex-shrink-0">
+                            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-amber-700 to-amber-600 opacity-60 blur-[2px]"></span>
+                            <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-amber-600 shadow-xs bg-white">
+                              {sub.photo ? (
+                                <img
+                                  src={sub.photo}
+                                  alt={sub.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-amber-50 flex items-center justify-center text-amber-800 font-bold font-mono text-sm uppercase">
+                                  {sub.name.slice(0, 2)}
+                                </div>
+                              )}
+                            </div>
+                            <span className="absolute -bottom-1 -right-1 bg-amber-700 text-white rounded-full p-0.5 border border-white shadow-xs flex items-center justify-center">
+                              <Award className="w-3 h-3 text-white fill-amber-300" />
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="relative flex-shrink-0">
+                            <div className="relative w-10 h-10 rounded-full overflow-hidden border border-slate-200 shadow-xs bg-white">
+                              {sub.photo ? (
+                                <img
+                                  src={sub.photo}
+                                  alt={sub.name}
+                                  referrerPolicy="no-referrer"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-slate-50 flex items-center justify-center text-slate-400 font-bold font-mono text-xs uppercase">
+                                  {sub.name.slice(0, 2)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="font-bold text-slate-850 flex items-center gap-2">
+                            <span>{sub.name}</span>
+                            {rank <= 3 && (
+                              <span className={`text-[9px] font-mono font-black px-1.5 py-0.5 rounded-xs select-none tracking-wider ${
+                                rank === 1 ? "bg-amber-100 text-amber-800 border border-amber-300 animate-bounce" :
+                                rank === 2 ? "bg-slate-100 text-slate-700 border border-slate-300" :
+                                "bg-amber-50 text-amber-900 border border-amber-500/20"
+                              }`}>
+                                {rank === 1 ? "JUARA 1" : rank === 2 ? "JUARA 2" : "JUARA 3"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] font-mono text-slate-400 tracking-wider">
+                            NIK: {sub.nik} • <span className="text-teal-700 font-black uppercase text-[10px]">{sub.jabatanName || "Umum"}</span>
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-4 px-4 text-center whitespace-nowrap">
                       <span className={`font-mono font-extrabold text-base ${sub.score >= 80 ? "text-emerald-700" : sub.score >= 70 ? "text-teal-700" : "text-rose-600"}`}>

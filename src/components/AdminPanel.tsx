@@ -39,7 +39,6 @@ interface AdminPanelProps {
   onUpdateJabatanSettings: (updatedJabatanList: Jabatan[]) => void;
   onDeleteSubmission: (id: string) => void;
   onResetAllData: () => void;
-  onViewCertificateForSubmission: (sub: Submission) => void;
   onRefreshSubmissions: () => Promise<void>;
 }
 
@@ -53,7 +52,6 @@ export default function AdminPanel({
   onUpdateJabatanSettings,
   onDeleteSubmission,
   onResetAllData,
-  onViewCertificateForSubmission,
   onRefreshSubmissions
 }: AdminPanelProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -1166,14 +1164,6 @@ export default function AdminPanel({
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
-                          {sub.isPassed && (
-                            <button
-                              onClick={() => onViewCertificateForSubmission(sub)}
-                              className="px-2.5 py-1.5 bg-teal-100 hover:bg-teal-200 text-teal-950 font-black border border-teal-300 rounded-none transition text-[10px] font-mono uppercase tracking-wide cursor-pointer"
-                            >
-                              Sertifikat
-                            </button>
-                          )}
                           <button
                             onClick={() => {
                               if (confirm("Hapus baris hasil peserta ini?")) onDeleteSubmission(sub.id);

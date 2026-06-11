@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 
 import Leaderboard from "./components/Leaderboard";
-import Certificate from "./components/Certificate";
 import TestPortal from "./components/TestPortal";
 import AdminPanel from "./components/AdminPanel";
 import RegionalHLogo from "./components/RegionalHLogo";
@@ -53,7 +52,7 @@ export default function App() {
   });
 
   // State
-  const [currentView, setCurrentView] = useState<"home" | "test" | "result" | "certificate" | "leaderboard" | "admin">("home");
+  const [currentView, setCurrentView] = useState<"home" | "test" | "result" | "leaderboard" | "admin">("home");
   const [userSession, setUserSession] = useState<UserSession | null>(null);
 
   // Form Inputs
@@ -145,18 +144,14 @@ export default function App() {
     if (kuisParam && currentJabatanList.length > 0) {
       const exists = currentJabatanList.some(j => j.id === kuisParam);
       if (exists) {
-        if (selectedJabatanId !== kuisParam) {
-          setSelectedJabatanId(kuisParam);
-        }
+        setSelectedJabatanId(kuisParam);
       } else {
-        if (!selectedJabatanId) {
-          setSelectedJabatanId(currentJabatanList[0].id);
-        }
+        setSelectedJabatanId(currentJabatanList[0].id);
       }
-    } else if (currentJabatanList.length > 0 && !selectedJabatanId) {
+    } else if (currentJabatanList.length > 0) {
       setSelectedJabatanId(currentJabatanList[0].id);
     }
-  }, [jabatanList, selectedJabatanId, isLoadingSync]);
+  }, [isLoadingSync]);
 
   // Synchronize current selectedJabatanId to browser URL query parameter so the URL in details matches active quiz selection
   useEffect(() => {
@@ -730,11 +725,11 @@ export default function App() {
               <div className="space-y-4">
                 {activeSubmission.isPassed ? (
                   <div className="text-xs text-slate-500 max-w-lg mx-auto">
-                    Keren! Anda telah berhasil mencapai kriteria batas kelulusan (KKM). Silakan klik <strong className="text-slate-850">Cetak Sertifikat</strong> di bawah guna mencetak berkas sertifikat kelulusan formal Anda.
+                    Keren! Anda telah berhasil mencapai kriteria batas kelulusan (KKM). Jawaban evaluasi dan hasil pre-test Anda berhasil terkirim dan disimpan di sistem evaluasi HRD.
                   </div>
                 ) : (
                   <div className="text-xs text-slate-500 max-w-lg mx-auto">
-                    Sayang sekali, skor Anda belum melampaui kriteria lulus minimum (KKM) yang dipersyaratkan. Silakan kembali melatih kemampuan, mintalah materi ke evaluator, dan klik tombol pengerjaan ulang guna mengulang pre-test.
+                    Sayang sekali, skor Anda belum melampaui kriteria lulus minimum (KKM) yang dipersyaratkan. Silakan kembali melatih kemampuan, mintalah materi ke pengawas, dan ulangi pengerjaan pre-test.
                   </div>
                 )}
 
@@ -752,16 +747,6 @@ export default function App() {
                   >
                     Lihat Papan Juara / Ranking
                   </button>
-
-                  {activeSubmission.isPassed && (
-                    <button
-                      onClick={() => setCurrentView("certificate")}
-                      className="px-5 py-2.5 bg-teal-800 hover:bg-teal-950 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Award className="w-4 h-4 text-amber-350" />
-                      Cetak Sertifikat Kelulusan
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -831,16 +816,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Certificate Section View only */}
-        {currentView === "certificate" && activeSubmission && (
-          <Certificate
-            submission={activeSubmission}
-            onBack={() => {
-              setCurrentView("home");
-            }}
-          />
-        )}
-
         {/* Leaderboards Peringkat board */}
         {currentView === "leaderboard" && (
           <div className="space-y-6">
@@ -861,10 +836,6 @@ export default function App() {
             onDeleteSubmission={handleDeleteSubmission}
             onResetAllData={handleResetAllData}
             onRefreshSubmissions={handleRefreshSubmissions}
-            onViewCertificateForSubmission={(sub) => {
-              setActiveSubmission(sub);
-              setCurrentView("certificate");
-            }}
           />
         )}
         </div>
